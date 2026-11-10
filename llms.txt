@@ -1,0 +1,27 @@
+# Pixel worlds
+
+> Ordinary UI controls with a small living pixel-art scene inside them, where the control's value drives the scene. Everything is painted in code with Canvas2D: no image files, no dependencies, no build step. MIT licensed.
+
+Live gallery: https://pixel-worlds.vercel.app
+Source: https://github.com/finktheartist/pixel-worlds
+
+## Drop-in components
+
+Each is one plain script that registers a custom element. Load it with a script tag. Do not rewrite or split the file.
+
+- [Sage](https://pixel-worlds.vercel.app/sage/sage.js): agent thinking states. `<sage-status state="thinking">`, then `el.set(state, label, detail)`. States: thinking, searching, reading, running, writing, waiting, done, failed. [Docs](https://github.com/finktheartist/pixel-worlds/blob/main/sage/README.md)
+- [Hoard](https://pixel-worlds.vercel.app/hoard/hoard.js): hold-to-delete button. `<hoard-button heading="..." warning="...">`, fires `hoard:delete` once when the hold completes. [Docs](https://github.com/finktheartist/pixel-worlds/blob/main/hoard/README.md)
+
+Install either one with the shadcn CLI: `npx shadcn add finktheartist/pixel-worlds/sage` or `npx shadcn add finktheartist/pixel-worlds/hoard`. The file lands in `public/pixel-worlds/`.
+
+## Whole pages, not yet elements
+
+- [Keep](https://pixel-worlds.vercel.app/keep/): a password field where strength is a castle. [Docs](https://github.com/finktheartist/pixel-worlds/blob/main/keep/README.md)
+- [Round](https://pixel-worlds.vercel.app/round/): a loading bar that is the bar of a tavern. [Docs](https://github.com/finktheartist/pixel-worlds/blob/main/round/README.md)
+
+## The skill
+
+- [pixel-worlds skill](https://pixel-worlds.vercel.app/skills/pixel-worlds/SKILL.md): the workflow and pixel rules these were made by. Install with `npx skills add finktheartist/pixel-worlds`.
+- [kit.js](https://pixel-worlds.vercel.app/skills/pixel-worlds/kit.js): the painter (layers, light, palette crush, pixel font, two-bone limbs, a clock you can stop).
+- [starter.html](https://pixel-worlds.vercel.app/skills/pixel-worlds/starter.html): the smallest whole example.
+- [look.mjs](https://pixel-worlds.vercel.app/skills/pixel-worlds/look.mjs): steps an animation to chosen moments and saves the frames side by side.

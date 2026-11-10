@@ -52,6 +52,14 @@ el.state;                                     // the current state name
 el.states;                                    // all eight names
 ```
 
+From React, load the script once in your HTML and use the element like any other tag. Changing a prop changes the chip:
+
+```jsx
+export function AgentStatus({ state, label, detail }) {
+  return <sage-status state={state} label={label} detail={detail} />;
+}
+```
+
 - **Attributes** do the same job as `set`: `state`, `label` and `detail`. Add `demo` to start it on the made-up run.
 - **An unknown state name is ignored.** With no second line, the working states show how many seconds they have been going.
 - **Size:** 306 by 72 by default. Set a CSS width on the element and it keeps its shape.

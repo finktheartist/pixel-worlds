@@ -1,0 +1,31 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "pixel-worlds",
+  "homepage": "https://pixel-worlds.vercel.app",
+  "items": [
+    {
+      "name": "sage",
+      "type": "registry:file",
+      "title": "Sage",
+      "description": "Agent thinking states as a status chip: a pixel-art wizard at his desk who does whatever the agent is doing. One file, no dependencies, defines <sage-status>.",
+      "author": "Justin Finkelman <https://github.com/finktheartist>",
+      "categories": ["status", "agent", "pixel-art"],
+      "files": [
+        { "path": "sage/sage.js", "type": "registry:file", "target": "~/public/pixel-worlds/sage.js" }
+      ],
+      "docs": "Sage is a plain script that registers a custom element. Load /pixel-worlds/sage.js with a script tag, then use <sage-status state=\"thinking\"></sage-status> and call el.set(state, label, detail). States: thinking, searching, reading, running, writing, waiting, done, failed. More: https://pixel-worlds.vercel.app"
+    },
+    {
+      "name": "hoard",
+      "type": "registry:file",
+      "title": "Hoard",
+      "description": "A hold-to-delete button with a pixel-art dragon in it. Hold and the fire is the fill; hold to the end and it fires hoard:delete. One file, no dependencies, defines <hoard-button>.",
+      "author": "Justin Finkelman <https://github.com/finktheartist>",
+      "categories": ["button", "confirm", "pixel-art"],
+      "files": [
+        { "path": "hoard/hoard.js", "type": "registry:file", "target": "~/public/pixel-worlds/hoard.js" }
+      ],
+      "docs": "Hoard is a plain script that registers a custom element. Load /pixel-worlds/hoard.js with a script tag, then use <hoard-button heading=\"Delete this project\" warning=\"This can't be undone.\"></hoard-button> and listen for the hoard:delete event. More: https://pixel-worlds.vercel.app"
+    }
+  ]
+}

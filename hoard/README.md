@@ -36,6 +36,22 @@ el.deleted;     // true once it has fired
 
 The event fires once, the moment the hold completes, and it bubbles. Letting go early fires nothing.
 
+From React, load the script once in your HTML and listen for the event through a ref:
+
+```jsx
+import { useEffect, useRef } from 'react';
+
+export function DeleteProject({ onDelete }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    el.addEventListener('hoard:delete', onDelete);
+    return () => el.removeEventListener('hoard:delete', onDelete);
+  }, [onDelete]);
+  return <hoard-button ref={ref} heading="Delete this project" warning="This can't be undone." />;
+}
+```
+
 | attribute | what it sets | default |
 |---|---|---|
 | `label`, `done-label` | the words on the button, before and after | Hold to delete, Deleted |

@@ -28,7 +28,14 @@ That opens the gallery, where all four are live.
 
 ## Use one
 
-Hoard and Sage are each a single file that defines an element. Copy the file into your project and:
+Hoard and Sage are each a single file that defines an element. Install one with the shadcn CLI, which puts the file in `public/pixel-worlds/`:
+
+```sh
+npx shadcn add finktheartist/pixel-worlds/sage
+npx shadcn add finktheartist/pixel-worlds/hoard
+```
+
+Or copy the file into your project by hand. Then:
 
 ```html
 <script src="sage.js"></script>
@@ -38,7 +45,9 @@ Hoard and Sage are each a single file that defines an element. Copy the file int
 <hoard-button heading="Delete this project" warning="This can't be undone."></hoard-button>
 ```
 
-Their READMEs list the attributes, methods and events. Keep and Round are still whole pages, not elements.
+Their READMEs list the attributes, methods and events, and show how to use them from React. Keep and Round are still whole pages, not elements.
+
+For agents, [llms.txt](llms.txt) lists every file and what it is.
 
 In the gallery, "Copy a prompt for your agent" gives you an install prompt that points a coding agent at the real file and tells it to wire it in, not redraw it.
 
