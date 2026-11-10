@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starter: a lantern switch</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #efe8d8; font: 15px/1.45 -apple-system, "Helvetica Neue", "Segoe UI", sans-serif; }
+  /* The real control sits invisibly on top of its drawn version, so clicks, the keyboard and screen readers all work the normal way. */
+  .lantern { position: relative; width: 288px; height: 120px; }
+  .lantern canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  .lantern input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .lantern:has(input:focus-visible) { outline: 3px solid #26221c; outline-offset: 4px; }
+</style>
+</head>
+<body>
+<label class="lantern"><canvas aria-hidden="true"></canvas><input type="checkbox" role="switch" aria-label="Lantern"></label>
+<script src="kit.js"></script>
+<script>
+// The smallest whole example: a switch that is a lantern in a cellar. One number, v, from 0 (out) to 1 (lit), drives everything.
+// Copy this file, keep the shape of it, and change what is painted.
+const W = 96, H = 40;
+const k = PixelKit({ w: W, h: H, palette: [
+  '#04050a', '#101322', '#181c32', '#243560', '#32497c', '#46639a', '#8eaad2', '#e4ecf6',
+  '#332a52', '#473a6c', '#62528a', '#24160c', '#5e3b0f', '#855714', '#ae7a1c', '#d4a02c', '#f0ca4a', '#fbe88a', '#fffbd4',
+  '#7c1e12', '#e0641e', '#f89a38', '#3c3430', '#6a5c50', '#9c8a70',
+] });
+const view = document.querySelector('canvas'), input = document.querySelector('input');
+let v = 0, time = 0;
+
+// 1. The things that never move are painted once, in their own colours, with no light on them yet.
+const room = document.createElement('canvas'); room.width = W; room.height = H;
+k.on(room.getContext('2d'), () => {
+  k.g.fillStyle = k.lin(0, 0, 0, H, '#74729a', '#55537a'); k.g.fillRect(0, 0, W, H);
+  for (let y = 4; y < 32; y += 8) { k.rc(0, y, W, 1, 'rgba(12,10,26,.35)'); for (let x = (y & 8 ? 9 : 0) + 4; x < W; x += 18) k.rc(x, y - 7, 1, 7, 'rgba(12,10,26,.25)'); }   // flat courses of stone, no noise
+  k.g.fillStyle = k.lin(0, 32, 0, H, '#a8763c', '#5a3414'); k.g.fillRect(0, 32, W, 8); k.rc(0, 32, W, 1, '#d8a860');
+});
+
+function frame(dt) {
+  time += dt; v += k.clamp((input.checked ? 1 : 0) - v, -dt / 0.25, dt / 0.6);   // it takes a moment to catch, and goes out quicker
+  const flick = 0.88 + 0.12 * k.vnoise(time * 9, 1), LX = 24, LY = 17;
+  // 2. Say what is giving light in this frame. Here: a cold dark ambient, and the lantern as far as it is lit.
+  const S = { amb: 'rgb(54,58,104)', lights: v > 0 ? [[LX, LY, 20 + 60 * v, '255,180,100', v * flick]] : [] };
+  k.begin();
+  // 3. Each thing on its own layer, multiplied by the light, then drawn. The edge facing the light gets a rim.
+  const wall = k.lit(k.layer(() => k.g.drawImage(room, 0, 0)), S); k.g.drawImage(wall, 0, 0);
+  const lamp = k.layer(() => { k.rc(LX - 0.5, 0, 1, 9, '#6a5c50'); k.rc(LX - 5, 9, 10, 2, '#ae7a1c'); k.rc(LX - 4, 11, 8, 11, 'rgba(142,170,210,.35)'); k.rc(LX - 5, 22, 10, 2, '#855714'); k.rc(LX - 4, 11, 1, 11, '#855714'); k.rc(LX + 3, 11, 1, 11, '#855714'); });
+  k.lit(lamp, S); k.rim(lamp, 0, -1, LX, LY, 30, '255,220,150', v); k.g.drawImage(lamp, 0, 0); k.release(wall, lamp);
+  // 4. Things that glow are drawn after the light, so they are never dimmed by it.
+  if (v > 0.02) { const h = 6 * v * flick; k.fillP('#f89a38', (c) => { c.moveTo(LX - 1.6, 21); c.quadraticCurveTo(LX - 2, 21 - h * 0.5, LX, 21 - h); c.quadraticCurveTo(LX + 2, 21 - h * 0.5, LX + 1.6, 21); }); k.ell(LX, 19.6, 0.9, 1.5 * v, '#fffbd4'); }
+  // 5. Crush it. Then letter it, after the crush and in whole pixels, so the words stay exact.
+  const art = k.crush();
+  k.on(k.actx, () => { const word = input.checked ? 'LIT' : 'DARK'; k.ptext(word, 51, 14, '#04050a', 1); k.ptext(word, 50, 13, v > 0.5 ? '#fbe88a' : '#8eaad2', 1); });
+  k.show(view, art);
+}
+k.run(frame, 4);   // ?film=1 stops the clock and gives you window.__film to step it
+</script>
+</body>
+</html>

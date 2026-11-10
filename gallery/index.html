@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gallery</title>
+<style>
+  :root { --bg: #0c0d11; --panel: #14161b; --line: rgba(255, 255, 255, .09); --text: #e9eaed; --mute: #8d919a; --faint: #5b5f69; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 -apple-system, "Helvetica Neue", "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  .shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 0 40px; max-width: 1120px; margin: 0 auto; padding: 36px 28px 64px; }
+
+  /* the list: one thing picked */
+  .rail { position: sticky; top: 36px; align-self: start; }
+  .rail h1 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: .01em; }
+  .rail .count { margin: 0 0 22px; color: var(--mute); font-size: 13px; }
+  .rail h2 { margin: 22px 0 6px; padding: 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .rail ul { list-style: none; margin: 0; padding: 0; }
+  .item { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 10px; border-radius: 8px; text-align: left; color: var(--mute); transition: background .15s, color .15s; }
+  .item span { font-size: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item:hover { color: var(--text); background: rgba(255, 255, 255, .04); }
+  .item[aria-current="true"] { color: var(--text); background: rgba(255, 255, 255, .08); }
+  .item[aria-current="true"] span { color: var(--mute); }
+  .item:focus-visible, .act:focus-visible, .step:focus-visible { outline: 2px solid rgba(255, 255, 255, .7); outline-offset: 2px; }
+
+  /* the one on show */
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  .head h2 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -.01em; line-height: 1.15; }
+  .head p { margin: 2px 0 0; color: var(--mute); }
+  .steps { display: flex; align-items: center; gap: 6px; flex: none; color: var(--mute); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .step { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 999px; font-size: 16px; line-height: 1; transition: border-color .15s, background .15s; }
+  .step:hover { border-color: rgba(255, 255, 255, .3); background: rgba(255, 255, 255, .04); }
+  .steps i { font-style: normal; min-width: 4.4em; text-align: center; }
+  .how { display: flex; align-items: baseline; gap: 10px; margin: 16px 0 12px; }
+  .how b { flex: none; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .stage { display: grid; place-items: center; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; transition: height .22s ease, background-color .22s ease; }
+  .stage iframe { display: block; width: min(100%, 720px); border: 0; background: transparent; opacity: 0; transition: opacity .18s ease; }
+  .stage iframe.in { opacity: 1; }
+  .under { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; }
+  .act { height: 34px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; transition: border-color .15s, background .15s; }
+  .act:hover { border-color: rgba(255, 255, 255, .3); background: rgba(255, 255, 255, .04); }
+  .said { color: var(--mute); font-size: 13px; }
+  .drive { display: flex; align-items: center; gap: 12px; flex: 1 1 260px; min-width: 0; color: var(--mute); font-size: 13px; }
+  .drive input { flex: 1; min-width: 0; accent-color: #fff; }
+  .drive output { min-width: 3.4em; color: var(--text); font-variant-numeric: tabular-nums; }
+  [hidden] { display: none !important; }
+
+  @media (max-width: 820px) {
+    .shell { display: block; padding: 20px 16px 48px; }
+    .rail { position: static; }
+    .rail .count { margin-bottom: 12px; }
+    /* the list turns into one strip you can swipe */
+    .rail nav { display: flex; align-items: center; gap: 6px; margin: 0 -16px 22px; padding: 2px 16px 10px; overflow-x: auto; scrollbar-width: none; }
+    .rail nav::-webkit-scrollbar { display: none; }
+    .rail h2 { margin: 0 2px 0 8px; padding: 0; flex: none; }
+    .rail h2:first-child { margin-left: 0; }
+    .rail ul { display: flex; gap: 6px; flex: none; }
+    .item { width: auto; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; white-space: nowrap; }
+    .item span { display: none; }
+    .head h2 { font-size: 22px; }
+    .steps i { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="rail">
+    <h1>Gallery</h1>
+    <p class="count"></p>
+    <nav aria-label="Components"></nav>
+  </aside>
+  <main>
+    <div class="head">
+      <div><h2 id="name"></h2><p id="kind"></p></div>
+      <div class="steps"><button class="step" id="prev" type="button" aria-label="Previous">&#8249;</button><i id="where"></i><button class="step" id="next" type="button" aria-label="Next">&#8250;</button></div>
+    </div>
+    <p class="how"><b>Try it</b><span id="how"></span></p>
+    <div class="stage" id="stage"><iframe id="frame" title=""></iframe></div>
+    <div class="under">
+      <label class="drive" id="drive" hidden>Progress <input id="load" type="range" min="0" max="100" value="0"><output for="load">demo</output></label>
+      <button class="act" id="demo" type="button" hidden>Play the demo</button>
+      <a class="act" id="own" href="#">Open on its own</a>
+      <button class="act" type="button" data-copy="prompt" hidden>Copy a prompt for your agent</button>
+      <span class="said" role="status"></span>
+    </div>
+  </main>
+</div>
+<script>
+// Everything in the gallery: which page to show, how tall it needs to be (wide, narrow), and the colour of the page it was made for.
+const CREAM = '#efe8d8';
+const ITEMS = [
+  { id: 'keep', group: 'Controls', name: 'Keep', kind: 'Password field', how: 'Click the field and type a password. The stronger it is, the more castle you get.', src: '../keep/', own: '../keep/', h: [560, 330], bg: CREAM },
+  { id: 'round', group: 'Controls', name: 'Round', kind: 'Loading bar', how: 'It plays a load by itself. Drag the slider under it to drive it, or click the bar to replay.', src: '../round/?embed=1', own: '../round/', h: [270, 150], bg: CREAM, drive: true },
+  { id: 'hoard', group: 'Controls', name: 'Hoard', kind: 'Hold-to-delete button', how: 'Press and hold the button for about two seconds. Let go early and nothing is deleted.', src: '../hoard/?embed=1', own: '../hoard/', h: [164, 250], bg: CREAM, file: '../hoard/hoard.js' },
+  { id: 'sage', group: 'Controls', name: 'Sage', kind: 'Agent thinking states', how: 'It plays a made-up run. Pick a state under it to hold it there.', src: '../sage/?embed=1', own: '../sage/', h: [150, 190], bg: CREAM, file: '../sage/sage.js' },
+];
+// Prompts that hand an agent the real file and ask it to wire it in. They do not ask it to draw a dragon.
+// WORKFLOW is the skill these were made by. The prompt installs one component; the skill is how to check it, change it, or make another. Its address is worked out from wherever this page is served.
+const WORKFLOW = { name: 'pixel-worlds', url: new URL('../skill/pixel-worlds/SKILL.md', location.href).href };
+const withWorkflow = () => (WORKFLOW.url ? `
+
+These components were made with my ${WORKFLOW.name} skill: ${WORKFLOW.url}
+Read it before you start. For this job, follow its "Wire it in" and "Check it" sections, and report the way its last section says. If I later ask you to change how the component looks, or to make another one in the same style, use the whole skill: it comes with the painter kit and a script for looking at the frames.` : '');
+const PROMPTS = {
+  sage: (url) => `Add the Sage status chip to my app. It is a single JavaScript file with no dependencies that defines a <sage-status> element.
+
+1. Get the file from ${url} and save it in my project as sage.js. Do not rewrite it or split it up.
+2. Load it with a plain script tag, and put <sage-status state="thinking"></sage-status> where my agent's status should show.
+3. Wire it to my agent. Call el.set(state, label, detail) whenever the agent changes what it is doing. The states are thinking, searching, reading, running, writing, waiting, done and failed. Use waiting whenever the agent is blocked on the user. An unknown state is ignored.
+4. The label and the second line are drawn in a caps-only pixel font. Keep the label to about 14 characters and the second line to about 17.
+5. It is 306 by 72 pixels by default. Set a CSS width on the element to resize it; it keeps its shape.
+
+When you are done, show me where you put it and a table of which of my agent's events map to which state. If something about it needs to look different, tell me instead of editing the painter.`,
+  hoard: (url) => `Add the Hoard hold-to-delete button to my app. It is a single JavaScript file with no dependencies that defines a <hoard-button> element.
+
+1. Get the file from ${url} and save it in my project as hoard.js. Do not rewrite it or split it up.
+2. Load it with a plain script tag, and use <hoard-button></hoard-button> where my delete confirmation is. For the parchment card around it, add heading and warning attributes, for example heading="Delete this project" warning="This can't be undone."
+3. Listen for the "hoard:delete" event on the element and do the real delete there. It fires once, when the hold completes. Letting go early fires nothing.
+4. Other attributes: label and done-label for the button text, done-heading and done-warning for the card after the delete, and hold for how many seconds to hold (1.7 by default). Call el.reset() to put it back.
+5. The words are drawn in a caps-only pixel font on one line each, so keep them short.
+6. Holding is the only way to confirm. If my app needs another way for people who cannot keep a key or a finger down, add a separate plain confirm and tell me.
+
+When you are done, show me where you put it and what the delete handler does. If something about it needs to look different, tell me instead of editing the painter.`,
+};
+
+const $ = (id) => document.getElementById(id), nav = document.querySelector('.rail nav'), frame = $('frame'), stage = $('stage'), said = document.querySelector('.said');
+const narrow = matchMedia('(max-width: 820px)');
+let at = -1;
+document.querySelector('.count').textContent = `${ITEMS.length} controls with a pixel world inside them, all live.`;
+for (const group of [...new Set(ITEMS.map((it) => it.group))]) {
+  const ul = document.createElement('ul'); nav.append(Object.assign(document.createElement('h2'), { textContent: group }), ul);
+  for (const it of ITEMS.filter((x) => x.group === group)) {
+    const b = Object.assign(document.createElement('button'), { className: 'item', type: 'button' }); b.dataset.id = it.id;
+    b.append(it.name, Object.assign(document.createElement('span'), { textContent: it.kind })); b.addEventListener('click', () => show(ITEMS.indexOf(it)));
+    const li = document.createElement('li'); li.append(b); ul.append(li);
+  }
+}
+function size() { const it = ITEMS[at]; if (!it) return; const h = it.h[narrow.matches ? 1 : 0]; frame.style.height = h + 'px'; stage.style.height = (narrow.matches ? h + 28 : Math.max(380, h + 96)) + 'px'; }
+function show(i, quiet) {
+  i = (i + ITEMS.length) % ITEMS.length; if (i === at) return; at = i;
+  const it = ITEMS[i];
+  for (const b of nav.querySelectorAll('.item')) { const on = b.dataset.id === it.id; b.setAttribute('aria-current', on); if (on && narrow.matches) b.scrollIntoView({ inline: 'center', block: 'nearest' }); }
+  $('name').textContent = it.name; $('kind').textContent = it.kind; $('how').textContent = it.how; $('where').textContent = `${i + 1} of ${ITEMS.length}`;
+  stage.style.backgroundColor = it.bg; size();
+  frame.classList.remove('in'); frame.title = `${it.name}, ${it.kind.toLowerCase()}`; frame.src = it.src;   // one live page at a time
+  $('own').href = it.own; $('drive').hidden = $('demo').hidden = !it.drive;
+  for (const b of document.querySelectorAll('[data-copy]')) b.hidden = !it.file;
+  said.textContent = '';
+  $('load').value = 0; document.querySelector('.drive output').textContent = 'demo';
+  if (!quiet) history.replaceState(null, '', '#' + it.id);
+}
+frame.addEventListener('load', () => frame.classList.add('in'));
+narrow.addEventListener('change', size);
+$('prev').addEventListener('click', () => show(at - 1)); $('next').addEventListener('click', () => show(at + 1));
+addEventListener('keydown', (e) => { if (e.target.matches('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return; if (e.key === 'ArrowLeft') show(at - 1); if (e.key === 'ArrowRight') show(at + 1); });
+addEventListener('hashchange', () => { const i = ITEMS.findIndex((it) => it.id === location.hash.slice(1)); if (i >= 0) show(i, true); });
+
+// The slider drives Round through the same call a real task would use.
+const round = () => frame.contentWindow && frame.contentWindow.round;
+$('load').addEventListener('input', () => { const r = round(); if (r) { r.set($('load').value / 100); document.querySelector('.drive output').textContent = $('load').value + '%'; } });
+$('demo').addEventListener('click', () => { const r = round(); if (r) { r.demo(); $('load').value = 0; document.querySelector('.drive output').textContent = 'demo'; } });
+
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch { const t = Object.assign(document.createElement('textarea'), { value: text }); document.body.append(t); t.select(); document.execCommand('copy'); t.remove(); }
+}
+for (const b of document.querySelectorAll('[data-copy]')) b.addEventListener('click', async () => {
+  const it = ITEMS[at], url = new URL(it.file, location.href).href;
+  try { const text = PROMPTS[it.id](url) + withWorkflow(); await copy(text); said.textContent = `Copied the prompt, ${text.length.toLocaleString()} characters`; }
+  catch { said.textContent = 'Could not copy'; }
+  setTimeout(() => { said.textContent = ''; }, 2600);
+});
+
+show(Math.max(0, ITEMS.findIndex((it) => it.id === location.hash.slice(1))), true);
+</script>
+</body>
+</html>
