@@ -32,6 +32,12 @@ Every frame goes through the same three steps. `starter.html` shows all of them 
 
 One light is better than several. Let the control change the light, so the whole scene reacts.
 
+Three things about the light that are easy to get wrong:
+
+- **Multiplying can only darken.** A surface comes out as its own colour times the light, so under a dim ambient a pale prop goes grey. Either give it a light, or draw it after the light with the things that glow.
+- **A wide soft light speckles flat areas.** A slow falloff across a flat wall or sky crushes to a broad band of dither. Keep lights tight, leave the sky unlit, or lower `spread` when you make the kit.
+- **A rim has a direction.** `k.rim(L, -1.2, 0, ...)` lights right-hand edges and `k.rim(L, 0, 1.2, ...)` lights top edges. Use a colour brighter than the surface.
+
 ## 3. The pixel rules
 
 These are the corrections that came up most. Check each one.
@@ -45,13 +51,14 @@ These are the corrections that came up most. Check each one.
 - **Light faces from in front.** Put the lamp on the far side of whatever the character is looking at.
 - **Add the colours the light needs.** If a lit surface turns grey or green after the crush, the palette is missing that colour. Add it.
 - **Ink outlines only on things you can press.** A status chip gets a plain frame. A button gets the outline and a hard shadow, and sits down on its shadow when pressed.
+- **A creature is a silhouette first.** Get the outline reading at full size in flat black before adding anything inside it. For anything that moves in a cycle (wings, legs), draw three or four fixed poses and step between them. Do not let a limb pass behind the body, where it vanishes. Below about twenty pixels tall, a character is a shape, not a drawing.
 
 ## 4. Look before you say it is done
 
 This is the step that matters most. A painter that runs without errors has told you nothing about how it looks.
 
 1. Give the page a stopped clock. `k.run(frame, seconds)` does it: with `?film=1` in the address it exposes `window.__film.step()` and `.seek()`.
-2. Capture the moments that matter, not evenly spaced ones: the start, mid-action, the turn, the end, and each state.
+2. Capture the moments that matter, not evenly spaced ones: the start, mid-action, the turn, the end, and each state. Times are seconds from the start of the film. Use `--act "1.2:js"` to click or change something partway, and `"my-element >>> canvas"` to reach a canvas inside a custom element.
 
    ```sh
    node look.mjs "http://localhost:8000/starter.html?film=1" --times 0.2,0.5,0.9,1.6 --do "document.querySelector('input').checked = true"
@@ -62,7 +69,23 @@ This is the step that matters most. A painter that runs without errors has told 
 
 ## 5. Wire it in
 
-- **One file, one element.** Ship it as a single script that registers a custom element, with no dependencies and nothing added to the page's global names. Several on one page must work: one painter and one animation loop for all of them.
+- **One file, one element.** Ship it as a single script that registers a custom element, with no dependencies and nothing added to the page's global names. That means pasting the kit's code into the component's own file inside one wrapper function; `kit.js` as a second file is for sketching. Several on one page must work: one painter and one animation loop for all of them.
+
+  ```js
+  (() => {
+    // ...the kit and your painter, shared by every instance...
+    const LIVE = new Set();
+    class MyControl extends HTMLElement {
+      constructor() { super(); this.attachShadow({ mode: 'open', delegatesFocus: true }).innerHTML = '<button type="button"><canvas aria-hidden="true"></canvas><span>Label</span></button>'; }
+      connectedCallback() { LIVE.add(this); }
+      disconnectedCallback() { LIVE.delete(this); }
+      advance(dt) { /* update this instance's state from its inputs, paint, and blit to its own canvas */ }
+    }
+    customElements.define('my-control', MyControl);
+    let last = performance.now();
+    requestAnimationFrame(function loop(now) { for (const el of LIVE) el.advance(Math.min(0.05, (now - last) / 1000)); last = now; requestAnimationFrame(loop); });
+  })();
+  ```
 - **Attributes for what it says, an event for what it did.** The value or state comes in as an attribute or a method. Finishing fires one event, once.
 - **A real control inside.** A `<button>`, an `<input>`, or a `role="status"` element carries focus, keys and announcements. Keyboard focus must be visible in the art.
 - **Do not edit the painter to restyle someone else's component.** Change its attributes, or say what needs to look different.
@@ -71,7 +94,7 @@ This is the step that matters most. A painter that runs without errors has told 
 
 Use it the way a person would, in a real browser, and report each of these separately.
 
-- **Pointer:** a real press, hold and release, not a call into the code.
+- **Pointer:** a real press, hold and release, not a call into the code. In headless Chrome that means sending mouse events through the DevTools protocol (`Input.dispatchMouseEvent`), the same connection `look.mjs` opens.
 - **Keyboard:** Tab to it, then the keys that should work it.
 - **Two widths:** a desktop width and about 390 pixels.
 - **More than one on a page,** if it is an element.

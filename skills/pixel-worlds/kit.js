@@ -1,6 +1,6 @@
 // kit.js: the painter these components are made with, as one file with no dependencies.
 //
-//   const k = PixelKit({ w: 96, h: 40, palette: ['#04050a', ...] });
+//   const k = PixelKit({ w: 96, h: 40, palette: ['#04050a', ...] });   // spread (default 10) is how far the dither reaches; lower it if flat areas speckle
 //   k.begin();                                   // clear the smooth canvas and draw on it
 //   const L = k.layer(() => k.ell(20, 20, 8, 8, '#f0c49c'));   // paint something in its own colours
 //   k.lit(L, { amb: 'rgb(60,64,110)', lights: [[70, 10, 80, '255,180,100', 1]] });   // multiply it by the light
@@ -66,6 +66,10 @@ function PixelKit(opts) {
     k.globalCompositeOperation = 'multiply'; k.drawImage(M, 0, 0); k.globalCompositeOperation = 'source-over'; release(M);
     return L;
   }
+  // A strip of light along one side of everything on a layer. dx, dy say how far to shave off the far side, so the strip is left on the side
+  // facing (-dx, -dy): rim(L, -1.2, 0, ...) lights right-hand edges, rim(L, 0, 1.2, ...) lights top edges. x, y, r place a falloff, so the rim
+  // fades away from the lamp; rgb is 'r,g,b' and a is its strength from 0 to 1. Pass another layer as occ to leave out edges that sit on top of it.
+  // Call it after lit(), and use a colour brighter than the surface or you will not see it.
   function rim(L, dx, dy, x, y, r, rgb, a, occ) {
     if (a <= 0) return;
     const k = L.getContext('2d'), R = scratch(), q = R.getContext('2d');
