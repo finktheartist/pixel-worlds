@@ -15,6 +15,10 @@ Everything is painted in code. There are no image files, no dependencies and no 
 
 ## Try them
 
+Live: https://pixel-worlds.vercel.app
+
+Or run it yourself:
+
 ```sh
 python3 -m http.server 8000     # from this folder
 # open http://localhost:8000/
