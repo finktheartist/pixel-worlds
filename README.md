@@ -45,7 +45,7 @@ Or copy the file into your project by hand. Then:
 <hoard-button heading="Delete this project" warning="This can't be undone."></hoard-button>
 ```
 
-Their READMEs list the attributes, methods and events, and show how to use them from React. Keep and Round are still whole pages, not elements.
+Their READMEs list the attributes, methods and events. Keep and Round are still whole pages, not elements.
 
 For agents, [llms.txt](llms.txt) lists every file and what it is.
 
