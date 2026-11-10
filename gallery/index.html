@@ -107,10 +107,11 @@ const ITEMS = [
 ];
 // Prompts that hand an agent the real file and ask it to wire it in. They do not ask it to draw a dragon.
 // WORKFLOW is the skill these were made by. The prompt installs one component; the skill is how to check it, change it, or make another. Its address is worked out from wherever this page is served.
-const WORKFLOW = { name: 'pixel-worlds', url: new URL('../skill/pixel-worlds/SKILL.md', location.href).href };
+const WORKFLOW = { name: 'pixel-worlds', url: new URL('../skills/pixel-worlds/SKILL.md', location.href).href, install: 'npx skills add finktheartist/pixel-worlds' };
 const withWorkflow = () => (WORKFLOW.url ? `
 
-These components were made with my ${WORKFLOW.name} skill: ${WORKFLOW.url}
+These components were made with my ${WORKFLOW.name} skill: ${WORKFLOW.url}${WORKFLOW.install ? `
+If you can install skills, install it with: ${WORKFLOW.install}` : ''}
 Read it before you start. For this job, follow its "Wire it in" and "Check it" sections, and report the way its last section says. If I later ask you to change how the component looks, or to make another one in the same style, use the whole skill: it comes with the painter kit and a script for looking at the frames.` : '');
 const PROMPTS = {
   sage: (url) => `Add the Sage status chip to my app. It is a single JavaScript file with no dependencies that defines a <sage-status> element.

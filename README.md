@@ -44,14 +44,20 @@ In the gallery, "Copy a prompt for your agent" gives you an install prompt that 
 
 ## Make your own
 
-`skill/pixel-worlds/` is the workflow these were made by, written as a skill for a coding agent:
+`skills/pixel-worlds/` is the workflow these were made by, written as a skill for a coding agent. Install it with:
+
+```sh
+npx skills add finktheartist/pixel-worlds
+```
+
+Or copy the `skills/pixel-worlds` folder into your agent's skills folder by hand (for Claude Code, `~/.claude/skills/`). It has four files:
 
 - `SKILL.md` is the workflow and the rules.
 - `kit.js` is the painter: layers, light, the palette crush, a pixel font.
 - `starter.html` is the smallest whole example, a lantern switch.
 - `look.mjs` steps an animation to chosen moments and saves the frames side by side.
 
-To use it, copy the `pixel-worlds` folder into your agent's skills folder (for Claude Code, `~/.claude/skills/`). The install prompt and the skill work together: the prompt puts one component in your app, and the skill is how to check it, change it or make another.
+The install prompt and the skill work together: the prompt puts one component in your app, and the skill is how to check it, change it or make another.
 
 An agent with the skill gets a reasonable first pass. These took many rounds of looking at frames and fixing them, and yours will too.
 
