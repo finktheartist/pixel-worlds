@@ -1,7 +1,7 @@
 // Keep: a password field where strength is a castle.
 // Every keystroke drops building pieces into a 180x96 pixel scene: rope fence, palisade,
 // stone wall and moat, castle, dragon. When you stop typing, a raccoon tests the defences.
-// The strength score is a toy heuristic. Nothing typed here is stored or sent anywhere.
+// The strength score is a small estimate of how guessable it is, not a security tool. Nothing typed here is stored or sent anywhere.
 
 const Q = new URLSearchParams(location.search);
 const FILM = Q.get('film') === '1';
@@ -347,31 +347,60 @@ const PERCH = { x: 72 + OX, y: 4 };
 const arrow = { live: false, stuck: 0, x: 0, y: 0, vx: 0, vy: 0 };
 let ladder = false, bushSmoke = 0, seq = null, smokeAcc = 0;
 
-// ───────────────────────── strength (a toy heuristic, not a security tool) ─────────────────────────
-const COMMON = new Set(['password', '123456', '12345678', '123456789', 'qwerty', 'abc123', 'letmein', 'hunter2', 'iloveyou',
-  'admin', 'welcome', 'monkey', 'dragon', 'password1', '111111', 'qwerty123', 'passw0rd', 'football', 'baseball', 'trustno1', 'raccoon']);
-const WORDS = ['password', 'qwerty', 'letmein', 'admin', 'welcome', '12345', 'iloveyou', 'abc123'];
+// ───────────────────────── strength ─────────────────────────
+// An estimate of how many guesses it would take, the way an attacker tries things: the usual passwords first, then words,
+// keyboard runs, sequences, repeats and years, and only then one character at a time. Length on its own buys very little.
+// It is a small hand-written estimate with a short word list, not a security tool.
+const TOP = ('password 123456 12345678 123456789 qwerty abc123 letmein hunter2 iloveyou admin welcome monkey dragon password1 111111 qwerty123 passw0rd football baseball trustno1 raccoon ' +
+  'master shadow sunshine princess superman batman login hello freedom whatever starwars secret love money computer internet michael jennifer jordan ashley daniel jessica charlie thomas robert matthew andrew joshua ' +
+  'george pepper ginger cookie cheese banana flower pokemon mustang harley ranger hockey soccer killer tigger buster summer winter spring autumn test guest root pass changeme').split(' ');
+const COMMON = new Set(TOP.slice(0, 21)), RANK = new Map(TOP.map((w, i) => [w, 4 + i * 6]));
+const LEET = { '@': 'a', 4: 'a', 0: 'o', 1: 'l', 3: 'e', $: 's', 5: 's', 7: 't', '!': 'i' };
+const KEYS = [['1234567890', 0], ['qwertyuiop', 0.5], ['asdfghjkl', 0.75], ['zxcvbnm', 1.25]], KPOS = {};
+KEYS.forEach(([row, off], r) => [...row].forEach((ch, i) => { KPOS[ch] = [r, i + off]; }));
+const nextKey = (a, b) => { const p = KPOS[a], q = KPOS[b]; return !!p && !!q && a !== b && Math.abs(p[0] - q[0]) <= 1 && Math.abs(p[1] - q[1]) <= 1.01; };
+const isL = (c) => c >= 'a' && c <= 'z';
+function guesses(pw) {
+  const n = pw.length, lc = pw.toLowerCase();
+  // letters, with a symbol or digit standing in for a letter (p@ssw0rd) read as that letter
+  const nm = [...lc].map((c, i) => (LEET[c] && isL(lc[i - 1] || '') && isL(lc[i + 1] || '') ? LEET[c] : c)), M = [];
+  const add = (i, j, g) => M.push([i, j, Math.max(1, g)]);
+  for (let i = 0; i < n; i++) {
+    if (!isL(nm[i])) continue;
+    for (let j = i + 2; j <= n && isL(nm[j - 1]); j++) {   // every run of letters, as a known password, a pronounceable word, or neither
+      const w = nm.slice(i, j).join(''), raw = pw.slice(i, j), caps = [...raw].filter((c) => c >= 'A' && c <= 'Z').length, swaps = [...lc.slice(i, j)].filter((c, k) => c !== nm[i + k]).length;
+      const wordy = /[aeiouy]/.test(w) && !/[^aeiouy]{5}/.test(w), base = RANK.get(w) || (wordy ? Math.pow(10, 0.55 * w.length) : Math.pow(20, w.length));
+      add(i, j, base * (caps === 0 ? 1 : caps === w.length || (caps === 1 && raw[0] !== lc[i]) ? 2 : 2 + caps) * (swaps ? Math.pow(2, swaps) : 1));
+    }
+  }
+  for (const w of TOP) for (let i = lc.indexOf(w); i >= 0; i = lc.indexOf(w, i + 1)) add(i, i + w.length, RANK.get(w));   // the ones with digits in them
+  for (let i = 0; i < n; i++) {
+    let j = i + 1; while (j < n && lc[j] === lc[i]) j++;                                   // aaaa
+    if (j - i >= 3) add(i, j, 12 * (j - i));
+    j = i + 1; const d = lc.charCodeAt(j) - lc.charCodeAt(i);                              // abcd, 9876
+    if (Math.abs(d) === 1) { while (j + 1 < n && lc.charCodeAt(j + 1) - lc.charCodeAt(j) === d) j++; if (j + 1 - i >= 3) add(i, j + 1, (lc[i] >= '0' && lc[i] <= '9' ? 10 : 26) * (j + 1 - i) * (d < 0 ? 2 : 1)); }
+    j = i; let turns = 0; while (j + 1 < n && nextKey(lc[j], lc[j + 1])) { if (j > i && Math.sign(KPOS[lc[j + 1]][1] - KPOS[lc[j]][1]) !== Math.sign(KPOS[lc[j]][1] - KPOS[lc[j - 1]][1])) turns++; j++; }   // qwerty, asdf
+    if (j + 1 - i >= 4) add(i, j + 1, 47 * (j + 1 - i) * Math.pow(2, Math.min(turns, 6)));
+    if (/^(19|20)\d\d/.test(lc.slice(i))) add(i, i + 4, 120);                              // a year
+    for (let len = 2; i + len * 2 <= n; len++) {                                          // the same thing again and again
+      const chunk = pw.slice(i, i + len); let k = 1; while (pw.startsWith(chunk, i + len * k)) k++;
+      if (k > 1) add(i, i + len * k, guesses(chunk) * k);
+    }
+  }
+  const best = new Array(n + 1).fill(Infinity); best[0] = 1;   // the cheapest way to cover the whole thing
+  for (let k = 1; k <= n; k++) {
+    const c = lc[k - 1]; best[k] = best[k - 1] * (isL(c) ? 20 : c >= '0' && c <= '9' ? 10 : 30);
+    for (const [i, j, g] of M) if (j === k && best[i] * g < best[k]) best[k] = best[i] * g;
+  }
+  return best[n];
+}
+// guesses, as powers of ten, onto the five stages: a thousand is a fence, a million a palisade, ten billion a castle
+const STEPS = [[0, 0], [3, 0.12], [6, 0.36], [8, 0.62], [10, 0.9], [13, 0.97], [14, 1]];
 function strength(pw) {
   if (!pw) return 0;
-  let pool = 0;
-  if (/[a-z]/.test(pw)) pool += 26;
-  if (/[A-Z]/.test(pw)) pool += 26;
-  if (/[0-9]/.test(pw)) pool += 10;
-  if (/[^a-zA-Z0-9]/.test(pw)) pool += 33;
-  let eff = 0; const seen = {};
-  for (let i = 0; i < pw.length; i++) {
-    const c = pw.charCodeAt(i);
-    let wgt = 1;
-    if (i > 0) { const d = c - pw.charCodeAt(i - 1); if (d === 0) wgt = 0.2; else if (Math.abs(d) === 1) wgt = 0.4; }
-    seen[c] = (seen[c] || 0) + 1;
-    if (seen[c] > 2) wgt *= 0.6;
-    eff += wgt;
-  }
-  let bits = eff * Math.log2(pool);
-  const lc = pw.toLowerCase();
-  if (COMMON.has(lc)) bits = Math.min(bits, 8);
-  else for (const w of WORDS) if (lc.includes(w)) bits -= w.length * 3.5;
-  return clamp(bits / 100, 0, 1);
+  const lg = Math.log10(guesses(pw.slice(0, 40)));
+  for (let k = 1; k < STEPS.length; k++) if (lg <= STEPS[k][0]) return STEPS[k - 1][1] + (lg - STEPS[k - 1][0]) / (STEPS[k][0] - STEPS[k - 1][0]) * (STEPS[k][1] - STEPS[k - 1][1]);
+  return 1;
 }
 function countFor(s) {
   for (let k = 0; k < 4; k++) {

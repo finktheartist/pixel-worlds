@@ -39,7 +39,8 @@ const stepped = await run('typeof window.__film === "object"');
 await run(`(() => { window.__look = { shots: [], grab(t) { const el = ${JSON.stringify(selector)}.split(' >>> ').reduce((r, q, i) => (i ? r.shadowRoot : r).querySelector(q), document); if (!el) throw new Error('nothing matches ' + ${JSON.stringify(selector)}); const c = document.createElement('canvas'); c.width = el.width; c.height = el.height; c.getContext('2d').drawImage(el, 0, 0); this.shots.push([t, c]); } }; })()`);
 let clock = 0;
 for (const t of times) {
-  if (stepped) await run(`window.__film.seek(${t})`); else { await sleep(Math.max(0, (t - clock) * 1000)); clock = t; }
+  if (stepped) await run(`(() => { const f = window.__film; if (f.seek) return f.seek(${t}); window.__lookT ??= 0; while (window.__lookT < ${t}) { f.step(60); window.__lookT += 1 / 60; } })()`);   // some pages only have step()
+  else { await sleep(Math.max(0, (t - clock) * 1000)); clock = t; }
   await run(`window.__look.grab(${t})`);
 }
 const data = await run(`(() => { const s = window.__look.shots, w = s[0][1].width, h = s[0][1].height, z = ${zoom}, cols = ${cols}, rows = Math.ceil(s.length / cols), o = document.createElement('canvas'); o.width = (w * z + 8) * cols + 8; o.height = (h * z + 26) * rows + 8; const x = o.getContext('2d'); x.imageSmoothingEnabled = false; x.fillStyle = '#2b2b30'; x.fillRect(0, 0, o.width, o.height); x.font = '13px monospace'; s.forEach(([t, c], i) => { const px = 8 + (i % cols) * (w * z + 8), py = 8 + Math.floor(i / cols) * (h * z + 26); x.drawImage(c, px, py + 18, w * z, h * z); x.fillStyle = '#d0d0d8'; x.fillText(t.toFixed(2) + ' s', px, py + 12); }); return o.toDataURL('image/png'); })()`);
