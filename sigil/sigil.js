@@ -54,7 +54,7 @@ function crush() {
 // ───────── the stone: baked once as a height map, an albedo and a shine, so that a light can be put on it every frame ─────────
 const NPX = W * H, SW = 36, SH = 40, FEET = 60;   // the figure's sprite is 36 x 40, and its hem rests on row 60
 const dist = (x, y) => Math.hypot(x - C, y - C);
-let HT, NX, NY, NZ, AR, AG, AB, SP, RID, RW, RBW, RBI, DISC, MASK;
+let HT, NX, NY, NZ, AR, AG, AB, SP, RID, RW, RBW, RBI, DISC, MASK, RGW, STID, STW, ANG;
 let CAL, CAA, CNX, CNY, CNZ, CHT;   // the figure: albedo, alpha, normals, height
 function boxBlur(a, w, h, r) {
   const t = new Float32Array(a.length), o = new Float32Array(a.length), n = 2 * r + 1;
@@ -90,6 +90,13 @@ function bakeStone() {
     x.save(); x.translate(CX, CX); x.rotate(RUNE_A(i)); x.translate(0, -R_RUNE); x.scale(1.2, 1.2); x.lineWidth = 1.2 / 1.2 * 1.05;
     for (const st of RUNES[i]) { x.beginPath(); st.forEach(([px, py], q) => (q ? x.lineTo(px - 2, py - 3.5) : x.moveTo(px - 2, py - 3.5))); x.stroke(); } x.restore();
   }));
+  // the parts of the circle that can glow by themselves: the outer ring (it is a gauge), and the five strokes of the star
+  const sv = Array.from({ length: 5 }, (_, k) => { const a = -Math.PI / 2 + (k * TAU) / 5; return [CX + 24.2 * Math.cos(a), CX + 24.2 * Math.sin(a)]; });
+  RGW = maskOf(W, H, (x) => ring(x, 42.6, 1.7));
+  const STM = sv.map((v, k) => maskOf(W, H, (x) => { x.lineWidth = 1.15; line(x, v, sv[(k + 2) % 5]); x.lineWidth = 0.9; x.beginPath(); x.arc(v[0], v[1], 2.4, 0, TAU); x.stroke(); }));
+  STID = new Int8Array(NPX).fill(-1); STW = new Float32Array(NPX); ANG = new Float32Array(NPX);
+  for (let k = 0; k < 5; k++) for (let i = 0; i < NPX; i++) if (STM[k][i] > STW[i]) { STW[i] = STM[k][i]; STID[i] = k; }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const a = Math.atan2(x - C, C - y); ANG[y * W + x] = a < 0 ? a + TAU : a; }   // how far round the circle each pixel is, clockwise from the top
   // cracks and pits, placed by hand; a crack is a few straight runs with a kink at each joint
   const crack = (pts) => (x) => { x.lineWidth = 0.8; x.beginPath(); pts.forEach(([px, py], q) => (q ? x.lineTo(px, py) : x.moveTo(px, py))); x.stroke(); };
   const CK = maskOf(W, H, (x) => {
@@ -148,21 +155,36 @@ function bakeFigure() {
 }
 
 // ───────── the wisp, and when things happen ─────────
-// The answer, in seconds from the moment the circle is done: the wisp spirals in, flares, the figure climbs out, the wisp goes to its hand, and it is still.
-const T_IN = 0.9, T_UP0 = 1.1, T_UP1 = 2.5, T_HAND0 = 2.4, T_HAND1 = 3.3, SETTLED = 4;
+// Three things the circle can be doing, and each has to look like itself:
+//   a plain spinner: the wisp goes round and round on its own, with a comet of ring and runes behind it that fades.
+//   progress: the wisp is a tracker. It sits at the front of an arc that grows clockwise from the top, and goes no further than the value.
+//   a stall (progress that has not moved for about a second, el.stalled): the wisp stays where it is, breathes, and sends a slow ripple out across the stone. It is waiting, and it is clearly not frozen.
+// The answer, in seconds from the moment the value reaches 1:
+//   0 to 0.5       the ring closes and flashes, and the runes flash round in turn
+//   0.5 to 1.2     the wisp dives into the middle in a spiral and the star is drawn behind it, one stroke at a time
+//   1.2 to 1.4     everything dims: a breath in
+//   1.4            the flare: a blast of light, two rings across the floor, sparks and a pillar of light
+//   1.55 to 3.0    the figure climbs out. 3.0 to 3.9: the wisp goes to its hand. After that it is quiet, and moves a little.
+const T_RING = 0.5, T_DIVE = 1.2, T_BLAST = 1.4, T_UP0 = 1.55, T_UP1 = 3.0, T_HAND0 = 3.0, T_HAND1 = 3.9, SETTLED = 4.5;
 const FX = C - 18, FY = FEET - SH;   // where the figure's sprite is, when it has come all the way up
 const HX = FX + HAND[0] + 1, HY = FY + HAND[1] - 5;   // where the wisp rests: just above its hand
-function flashAt(s) { return s.done ? smooth(T_IN - 0.05, T_IN + 0.06, s.ta) * (1 - smooth(T_IN + 0.06, T_IN + 0.9, s.ta)) : 0; }
+const flashAt = (s) => (s.done ? smooth(T_BLAST - 0.02, T_BLAST + 0.05, s.ta) * (1 - smooth(T_BLAST + 0.04, T_BLAST + 0.5, s.ta)) : 0);
+const dimAt = (s) => (s.done ? smooth(T_DIVE, T_DIVE + 0.1, s.ta) * (1 - smooth(T_BLAST - 0.03, T_BLAST, s.ta)) : 0);
+function divePos(ta) { const u = clamp((ta - T_RING) / (T_DIVE - T_RING), 0, 1), R = R_RUNE * Math.pow(1 - u, 1.6), a = 4.6 * u * u; return [C + R * Math.sin(a), C - R * Math.cos(a), u]; }
 function wispAt(s) {   // { x, y, z, I, a }: where the light is, how high above the floor, how bright, and how far round the ring
-  const t = s.time, fl = 0.9 + 0.1 * vnoise(t * 9, 4), bob = Math.sin(t * 5.3); let R = R_RUNE + bob * 1.2, a = (t / REV) * TAU, z = 11 + Math.sin(t * 4.1) * 1.1, I = fl, x, y;
-  if (!s.done) { x = C + R * Math.sin(a); y = C - R * Math.cos(a); }
-  else {
-    const ta = s.ta, f = flashAt(s);
-    if (ta < T_IN) { const u = ta / T_IN; R *= (1 - u) * (1 - u); a += 9 * u * u; x = C + R * Math.sin(a); y = C - R * Math.cos(a); z += 4 * u; I = fl * (1 + 1.1 * u); }
-    else {
-      const v = smooth(T_HAND0, T_HAND1, ta), settle = smooth(T_HAND0, SETTLED, ta); x = mix(C, HX, v); y = mix(C + 3, HY, v) + (ta > T_HAND1 ? bob * 0.6 : 0); z = mix(13, 9, v) + Math.sin(t * 3) * 0.5; I = fl * mix(1.7, 1.2, settle);
-    }
-    I += 4.2 * f * fl;
+  const t = s.time, fl = 0.9 + 0.1 * vnoise(t * 9, 4), bob = Math.sin(t * 5.3); let z = 11 + Math.sin(t * 4.1) * 1.1, I = fl, x, y, a = (t / REV) * TAU;
+  if (!s.done) {
+    const R = R_RUNE + bob * 1.2, xs = C + R * Math.sin(a), ys = C - R * Math.cos(a);   // where it would be going round on its own
+    if (s.det || s.dm > 0.01) {   // the tracker: at the front of the arc, and restless in place when it is waiting. Going to and from a plain spin it crosses the floor rather than jumping.
+      const w = s.stall, ap = s.p * TAU, Rd = R_RUNE + bob * 1.2 * (1 - 0.6 * w), m = s.dm * s.dm * (3 - 2 * s.dm);
+      const xd = C + Rd * Math.sin(ap) + w * 1.8 * Math.sin(t * 2.3), yd = C - Rd * Math.cos(ap) + w * 1.4 * Math.cos(t * 1.9);
+      x = mix(xs, xd, m); y = mix(ys, yd, m); I = fl * mix(1, mix(1, 0.74 + 0.26 * Math.sin(t * 2.8), w), m); z += w * 1.5 * Math.sin(t * 2.8) * m; if (s.det) a = ap;
+    } else { x = xs; y = ys; }
+  } else {
+    const ta = s.ta, f = flashAt(s), settle = smooth(T_HAND0, SETTLED, ta);
+    if (ta < T_DIVE) { const [dx, dy, u] = divePos(ta); x = dx; y = dy; z += 3 * u; I = fl * (1.2 + 1.5 * u) * (ta < T_RING ? 0.9 + 0.5 * smooth(0, T_RING, ta) : 1); }
+    else { const v = smooth(T_HAND0, T_HAND1, ta); x = mix(C, HX, v); y = mix(C + 3, HY, v) + (ta > T_HAND1 ? bob * 0.6 : 0); z = mix(14, 9, v) + Math.sin(t * 3) * 0.5; I = fl * mix(1.7, 1.2, settle) * (1 + 0.1 * settle * Math.sin(t * 1.7)); }
+    I = I * (1 - 0.9 * dimAt(s)) + 5 * f * fl;
   }
   return { x, y, z, I, a };
 }
@@ -171,12 +193,23 @@ function wispAt(s) {   // { x, y, z, I, a }: where the light is, how high above 
 const AMB = [0.036, 0.045, 0.078], SF = [0.07, 0.15, 0.27, 0.42, 0.6], AMP = 2.1, R0 = 21, RMAX = 62;
 const IMG = sctx.createImageData(W, H), OUT = IMG.data;
 const MOTES = Array.from({ length: 26 }, (_, k) => [hash(k, 1) * 70 + 13, hash(k, 2) * 60 + 18, 0.6 + hash(k, 3) * 1.1, hash(k, 4) * TAU]);
+let ER = 0, EG = 0, EB = 0;
+function emit(gl, w) {   // something that glows by itself: dim and teal at first, then white-hot. It adds to ER, EG, EB
+  const hot = Math.max(0, gl - 0.62) * 2.6, tw = Math.min(1, gl * 1.5);
+  ER += w * (0.08 * tw + 0.8 * hot); EG += w * (0.85 * tw + 0.5 * hot); EB += w * (0.7 * tw + 0.5 * hot);
+}
+const FLARE = new Float32Array(N), STAR_LV = new Float32Array(5);
 function scene(s) {
-  const t = s.time, ta = s.ta, done = s.done, wsp = wispAt(s), wx = wsp.x, wy = wsp.y, wz = wsp.z, I = wsp.I, flash = flashAt(s), heat = s.heat;
-  const settle = done ? smooth(T_HAND0, SETTLED, ta) : 0, charge = done ? mix(1 + 1.8 * flash, 0.55, settle) : 1;   // the runes burn brighter in the flare and bank down once it is quiet
+  const t = s.time, ta = s.ta, done = s.done, det = s.det, wsp = wispAt(s), wx = wsp.x, wy = wsp.y, wz = wsp.z, I = wsp.I, wa = wsp.a, flash = flashAt(s), dim = dimAt(s), heat = s.heat, stall = done ? 0 : s.stall;
+  const settle = done ? smooth(T_HAND0, SETTLED, ta) : 0, charge = done ? mix(1 + 1.8 * flash, 0.55, settle) * (1 - 0.7 * dim) : 1;   // the runes burn brighter in the flare and bank down once it is quiet
   const up = done ? clamp((ta - T_UP0) / (T_UP1 - T_UP0), 0, 1) : 0, rise = 1 - (1 - up) * (1 - up) * (1 - up), oy = Math.round(FY + SH * (1 - rise));   // how far the figure has come out of the floor
-  const ringR = done && ta > T_IN + 0.02 ? (ta - T_IN - 0.02) * 74 : -50, ringA = done ? clamp(1 - (ta - T_IN - 0.02) / 0.8, 0, 1) : 0;
-  const amp = AMP * I;
+  const pAng = s.p * TAU, tb = ta - T_BLAST;
+  const ringR = done && tb > 0 ? tb * 78 : -50, ringA = done ? clamp(1 - tb / 0.85, 0, 1) : 0, ring2R = done && tb > 0.2 ? (tb - 0.2) * 78 : -50, ring2A = done ? clamp(1 - (tb - 0.2) / 0.85, 0, 1) * 0.6 : 0;
+  const beamA = done ? smooth(T_BLAST, T_BLAST + 0.12, ta) * (1 - smooth(T_UP1 - 0.5, T_UP1 + 0.5, ta)) * (0.85 + 0.15 * Math.sin(t * 20)) : 0;   // a pillar of light up out of the middle
+  const ringLv = done ? (Math.max(0.34 * (1 + 0.22 * settle * Math.sin(t * 0.9)), 1.3 * (1 - smooth(0.3, T_RING + 0.2, ta))) * (0.7 + 0.3 * smooth(0, 0.15, ta)) + 1.6 * flash) * (1 - 0.85 * dim) : 0;
+  for (let i = 0; i < N; i++) FLARE[i] = done && ta < 0.8 ? 1.1 * Math.exp(-(((ta - 0.04 - i * 0.027) / 0.07) ** 2)) : 0;   // a flash that runs round the runes in turn, clockwise from the top
+  for (let k = 0; k < 5; k++) STAR_LV[k] = done ? smooth(T_RING + 0.1 + k * 0.12, T_RING + 0.3 + k * 0.12, ta) * (mix(1, 0.3 + 0.1 * Math.sin(t * 1.5 + k * 1.3), settle) + 1.6 * flash) * (1 - 0.85 * dim) : 0;   // the star is drawn, a stroke at a time
+  const amp = AMP * I, pingR = ((t % 2.1) / 2.1), pingA = stall * (1 - pingR) * (1 - pingR) * 1.0;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const p = y * W + x, o = p * 4; if (!DISC[p]) { OUT[o] = OUT[o + 1] = OUT[o + 2] = 0; OUT[o + 3] = 255; continue; }
     const hh = HT[p], dx = wx - x, dy = wy - y, dz = wz - hh, dxy2 = dx * dx + dy * dy, d2 = dxy2 + dz * dz, inv = 1 / Math.sqrt(d2), lx = dx * inv, ly = dy * inv, lz = dz * inv;
@@ -189,24 +222,38 @@ function scene(s) {
     }
     const hot = Math.min(1, att * I * 0.9), lr = mix(0.32, 0.72, hot), lg = 1, lb = mix(0.82, 0.95, hot), haze = 0.09 * I / (1 + dxy2 / 60);   // the light is teal, and whiter at its heart; some of it hangs in the air
     let r = AR[p] * (AMB[0] + lr * diff) / 255 + lr * (spec + haze * 0.4), gg = AG[p] * (AMB[1] + lg * diff) / 255 + lg * (spec + haze), b = AB[p] * (AMB[2] + lb * diff) / 255 + lb * (spec + haze * 0.85);
-    // the runes: charged ones glow in their grooves, most where the wisp is; the ones it passes in a plain spin are hot, and cool behind it
+    ER = EG = EB = 0;
+    // the runes: charged ones glow in their grooves, most where the wisp is. In a plain spin, the ones it passes ignite and cool behind it.
     const id = RID[p], bid = RBI[p];
     if (id >= 0 || (bid >= 0 && RBW[p] > 0.02)) {
-      const k = id >= 0 ? id : bid, e = heat[k] * charge;
-      if (e > 0.01) {
-        const prox = 1 / (1 + dxy2 / 150), gl = e * (0.34 + 0.66 * prox), w = id >= 0 ? RW[p] : RBW[p] * 0.16, hotw = Math.max(0, gl - 0.62) * 2.6, tw = Math.min(1, gl * 1.5);
-        r += w * (0.08 * tw + 0.8 * hotw); gg += w * (0.85 * tw + 0.5 * hotw); b += w * (0.7 * tw + 0.5 * hotw);
-      }
+      const k = id >= 0 ? id : bid; let e = heat[k] * charge * (1 + 0.2 * settle * Math.sin(t * 1.1 - k * 0.5)) + FLARE[k];
+      if (det && !done && heat[k] > 0.02 && heat[k] < 0.98) e *= 1 - 0.3 * stall * (0.5 + 0.5 * Math.sin(t * 4.2));   // the rune it is waiting on beats
+      if (e > 0.01) emit(e * (0.34 + 0.66 / (1 + dxy2 / 150)), id >= 0 ? RW[p] : RBW[p] * 0.16);
     }
-    if (ringA > 0) { const dd = (dist(x, y) - ringR) / 2.2, rv = Math.exp(-dd * dd) * ringA * 1.3; r += rv * 0.5; gg += rv; b += rv * 0.9; }   // the answer goes out across the floor as a ring of light
+    // the outer ring is a gauge. Progress fills it from the top and the wisp is its head; a plain spin leaves a fading comet on it
+    const rg = RGW[p];
+    if (rg > 0.02) {
+      let e = 0;
+      if (done) e = ringLv;
+      else if (det) { const a = ANG[p]; if (a <= pAng) { const q = pAng - a; e = (0.42 + 0.55 * Math.exp(-q * q / 0.03)) * (1 + 0.5 * stall * Math.sin(t * 2.8)); } }
+      else { const behind = (((wa - ANG[p]) % TAU) + TAU) % TAU; if (behind < 2.1) e = Math.pow(1 - behind / 2.1, 1.5) * 0.9; }
+      if (e > 0.01) emit(e, rg);
+    }
+    const sid = STID[p]; if (sid >= 0 && STAR_LV[sid] > 0.01) emit(STAR_LV[sid] * (0.5 + 0.5 / (1 + dxy2 / 400)), STW[p]);
+    if (ER + EG + EB > 0) { r += ER; gg += EG; b += EB; }
+    if (ringA > 0 || ring2A > 0) { const dd = dist(x, y), d1 = (dd - ringR) / 2.2, d3 = (dd - ring2R) / 2.2, rv = Math.exp(-d1 * d1) * ringA * 1.3 + Math.exp(-d3 * d3) * ring2A * 1.3; r += rv * 0.5; gg += rv; b += rv * 0.9; }   // the answer goes out across the floor as rings of light
+    if (beamA > 0.01) { const bx = (x - C) / 5.5, v = smooth(6, 26, y) * (1 - smooth(C + 6, C + 14, y)), bv = Math.exp(-bx * bx) * v * beamA * 0.75; r += bv * 0.6; gg += bv; b += bv * 0.9; }
+    if (pingA > 0.01) { const dd = (Math.sqrt(dxy2) - pingR * 26) / (1.6 + pingR * 1.4), rv = Math.exp(-dd * dd) * pingA * 0.5; r += rv * 0.3; gg += rv; b += rv * 0.8; }   // a stalled ring listens: a slow ripple goes out from the wisp
     OUT[o] = 255 * (1 - Math.exp(-1.25 * r)); OUT[o + 1] = 255 * (1 - Math.exp(-1.25 * gg)); OUT[o + 2] = 255 * (1 - Math.exp(-1.25 * b)); OUT[o + 3] = 255;
   }
-  // the figure, lit by the same wisp, with the part of it still under the floor not drawn
+  // the figure, lit by the same wisp, with the part of it still under the floor not drawn. Its hem sways a little once it is still.
   if (done && ta > T_UP0 - 0.05) {
+    const sway = smooth(T_UP1, SETTLED, ta);
     for (let sy = 0; sy < SH; sy++) {
       const y = oy + sy; if (y > FEET || y < 0) continue;
+      const shift = Math.round(Math.sin(t * 1.3 + sy * 0.35) * Math.max(0, sy - 24) / 16 * 1.1 * sway);
       for (let sx = 0; sx < SW; sx++) {
-        const i = sy * SW + sx, a = CAA[i]; if (a < 0.05) continue; const x = FX + sx; if (x < 0 || x >= W) continue;
+        const sxs = clamp(sx - shift, 0, SW - 1), i = sy * SW + sxs, a = CAA[i]; if (a < 0.05) continue; const x = FX + sx; if (x < 0 || x >= W) continue;
         const dx = wx - x, dy = wy - y, dz = wz - 2 - CHT[i], d2 = dx * dx + dy * dy + dz * dz, inv = 1 / Math.sqrt(d2), nl = Math.max(0, CNX[i] * dx * inv + CNY[i] * dy * inv + CNZ[i] * dz * inv), win = 1 - Math.min(1, d2 / (RMAX * RMAX)), att = (win * win) / (1 + d2 / (R0 * R0));
         const df = nl * att * amp * 2.4, hot = Math.min(1, att * I * 0.9), lr = mix(0.32, 0.72, hot), lg = 1, lb = mix(0.82, 0.95, hot), rimv = Math.pow(1 - CNZ[i], 2) * att * amp * 2.2;   // the edge facing the light catches it
         const r = CAL[i * 4] * (AMB[0] * 1.5 + lr * (df + rimv * 0.5)) / 255, gg = CAL[i * 4 + 1] * (AMB[1] * 1.5 + lg * (df + rimv)) / 255, b = CAL[i * 4 + 2] * (AMB[2] * 1.5 + lb * (df + rimv * 0.9)) / 255, o = (y * W + x) * 4;
@@ -216,30 +263,45 @@ function scene(s) {
   }
   g = sctx; g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.putImageData(IMG, 0, 0);
 
-  // what hangs in the air: mist where the figure climbs out, dust that only shows where the light catches it, and sparks off the wisp
+  // what hangs in the air: mist round the figure's feet once it is still, mist where it climbs out, dust that only shows where the light catches it, and sparks off the wisp
   g.globalCompositeOperation = 'lighter';
-  if (done && ta > T_UP0 - 0.2 && ta < T_HAND1 + 0.6) { const m = smooth(T_UP0 - 0.2, T_UP0 + 0.4, ta) * (1 - smooth(T_UP1, T_HAND1 + 0.6, ta)); for (const [oyy, rr] of [[0, 15], [-9, 12], [-18, 9]]) { const gr = g.createRadialGradient(C, FEET + oyy, 1, C, FEET + oyy, rr); gr.addColorStop(0, `rgba(80,200,170,${0.2 * m})`); gr.addColorStop(1, 'rgba(80,200,170,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); } }
+  const mist = (mx, my, rr, a) => { const gr = g.createRadialGradient(mx, my, 1, mx, my, rr); gr.addColorStop(0, `rgba(80,200,170,${a})`); gr.addColorStop(1, 'rgba(80,200,170,0)'); g.fillStyle = gr; g.fillRect(Math.max(0, mx - rr), Math.max(0, my - rr), rr * 2, rr * 2); };
+  if (done && ta > T_UP0 - 0.2 && ta < T_HAND1 + 0.6) { const m = smooth(T_UP0 - 0.2, T_UP0 + 0.4, ta) * (1 - smooth(T_UP1, T_HAND1 + 0.6, ta)); for (const [oyy, rr] of [[0, 15], [-9, 12], [-18, 9]]) mist(C, FEET + oyy, rr, 0.2 * m); }
+  if (done && settle > 0) for (let k = 0; k < 3; k++) { const mx = C + 15 * Math.sin(t * 0.21 + k * 2.1), my = FEET - 2 + 3 * Math.sin(t * 0.3 + k), pr = 1 / (1 + ((mx - wx) ** 2 + (my - wy) ** 2) / 500); mist(mx, my, 15, 0.05 * settle * (0.3 + 0.7 * pr)); }   // low mist drifts in and out of the light
   const dust = (k) => { const m = MOTES[k]; return [m[0] + 5 * Math.sin(t * 0.33 + m[3]) + 3 * Math.sin(t * 0.9 + k), ((m[1] - t * m[2] * 1.4) % 64 + 64) % 64 + 16]; };
   for (let k = 0; k < MOTES.length; k++) { const [mx, my] = dust(k), px = Math.round(mx), py = Math.round(my); if (dist(px, py) > 42) continue; const dd = (px - wx) ** 2 + (py - wy) ** 2, br = I * Math.exp(-dd / 700) * (0.6 + 0.4 * Math.sin(t * 3 + k * 2)); if (br > 0.14) rc(px, py, 1, 1, br > 0.8 ? '#7aeccc' : br > 0.4 ? '#38c4a6' : '#14706a'); }
   g.globalCompositeOperation = 'source-over';
+  // the blast throws sparks up and out, and they fall
+  if (done && tb > 0) for (let k = 0; k < 30; k++) {
+    const th = hash(k, 11) * TAU, spd = 20 + hash(k, 12) * 52, life = 0.8 + hash(k, 13) * 1.3; if (tb > life) continue;
+    const px = Math.round(C + Math.cos(th) * spd * tb * 0.9), py = Math.round(C + 4 - Math.abs(Math.sin(th)) * spd * tb * 1.15 + 58 * tb * tb), f = 1 - tb / life;
+    if (dist(px, py) < 44) { g.fillStyle = f > 0.7 ? '#f4fffa' : f > 0.45 ? '#7aeccc' : f > 0.2 ? '#1f9a88' : '#0f4a4a'; g.fillRect(px, py, k % 4 === 0 ? 2 : 1, 1); }
+  }
+  // a little ember lifts off the figure's hem now and then, and goes out
+  if (done && settle > 0.3) for (let k = 0; k < 6; k++) { const ph = (t * 0.3 + k / 6) % 1, px = Math.round(FX + 8 + k * 4 + 2 * Math.sin(t * 0.8 + k * 2)), py = Math.round(FEET - 4 - ph * 32); if (ph < 0.85 && dist(px, py) < 40) rc(px, py, 1, 1, ph < 0.3 ? '#f89a38' : ph < 0.6 ? '#b8421a' : '#7c1e12'); }
   // the wisp itself: a little flame with a tail of the places it has just been, and sparks that come off it and rise
-  const wispOn = !done || ta < T_HAND1 + 2, fade = done ? 1 : 1, wxr = Math.round(wx), wyr = Math.round(wy);
-  if (!done || ta < T_IN) {
-    const a0 = wsp.a, tail = done ? 1 - smooth(0.3, T_IN, ta) : 1;
-    for (let k = 14; k >= 1; k--) { const a = a0 - k * 0.075, R = R_RUNE + Math.sin((t - k * 0.012) * 5.3) * 1.2, rr = done ? R * (1 - ta / T_IN) * (1 - ta / T_IN) : R, x = C + Math.round(rr * Math.sin(a)), y = C - Math.round(rr * Math.cos(a)), ix = Math.round((5.6 - k * 0.36) * tail); if (ix >= 1) { g.fillStyle = ['#0f4a4a', '#14706a', '#1f9a88', '#38c4a6', '#7aeccc', '#c4fff0'][clamp(ix - 1, 0, 5)]; g.fillRect(x, y, 1, 1); if (k < 5) g.fillRect(x, y - 1, 1, 1); } }
+  const wispOn = !done || ta < T_HAND1 + 2, wxr = Math.round(wx), wyr = Math.round(wy);
+  const tail = done ? (ta < T_DIVE ? 1 : 0) : det ? smooth(0.1, 0.9, s.vel) : 1;
+  if (tail > 0.02) for (let k = 14; k >= 1; k--) {
+    let x, y; if (done) { const q = divePos(Math.max(0, ta - k * 0.035)); x = Math.round(q[0]); y = Math.round(q[1]); } else { const a = wa - k * 0.075, R = R_RUNE + Math.sin((t - k * 0.012) * 5.3) * 1.2; x = C + Math.round(R * Math.sin(a)); y = C - Math.round(R * Math.cos(a)); }
+    const ix = Math.round((5.6 - k * 0.36) * tail); if (ix >= 1) { g.fillStyle = ['#0f4a4a', '#14706a', '#1f9a88', '#38c4a6', '#7aeccc', '#c4fff0'][clamp(ix - 1, 0, 5)]; g.fillRect(x, y, 1, 1); if (k < 5) g.fillRect(x, y - 1, 1, 1); }
+  }
+  if (stall > 0.05) for (const off of [0, 0.5]) {   // a stalled ring is listening: thin rings go out from the wisp, one after another, and fade
+    const ph = (t / 2.1 + off) % 1, rr = 3 + ph * 25, al = stall * (1 - ph) * (1 - ph) * 0.95;
+    g.globalCompositeOperation = 'lighter'; g.strokeStyle = `rgba(120,240,205,${al})`; g.lineWidth = 1; g.beginPath(); g.arc(wxr + 0.5, wyr + 0.5, rr, 0, TAU); g.stroke(); g.globalCompositeOperation = 'source-over';
   }
   if (wispOn) {
     const gl = g.createRadialGradient(wxr + 0.5, wyr + 0.5, 0.5, wxr + 0.5, wyr + 0.5, 11); gl.addColorStop(0, `rgba(120,240,205,${0.2 * Math.min(1.6, I)})`); gl.addColorStop(1, 'rgba(120,240,205,0)'); g.globalCompositeOperation = 'lighter'; g.fillStyle = gl; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over';
-    const f1 = vnoise(t * 13, 7), f2 = vnoise(t * 17, 3), big = 1.35 + 0.45 * Math.max(0, I - 1.6);
-    g.fillStyle = '#38c4a6'; g.beginPath(); g.moveTo(wxr - 2.4 * big, wyr + 1.5); g.quadraticCurveTo(wxr - 2.2 * big, wyr - 2.5, wxr + (f1 - 0.5) * 2.5, wyr - 8 - 4 * f2); g.quadraticCurveTo(wxr + 2.2 * big, wyr - 2.5, wxr + 2.4 * big, wyr + 1.5); g.quadraticCurveTo(wxr, wyr + 3.5, wxr - 2.4 * big, wyr + 1.5); g.fill();
+    const f1 = vnoise(t * 13, 7), f2 = vnoise(t * 17, 3), big = (1.35 + 0.45 * Math.max(0, I - 1.6)) * (1 - 0.25 * stall * (0.5 + 0.5 * Math.sin(t * 2.8))) * (1 - 0.6 * dim);
+    g.fillStyle = '#38c4a6'; g.beginPath(); g.moveTo(wxr - 2.4 * big, wyr + 1.5); g.quadraticCurveTo(wxr - 2.2 * big, wyr - 2.5, wxr + (f1 - 0.5) * 2.5, wyr - (8 + 4 * f2) * (1 - 0.3 * stall)); g.quadraticCurveTo(wxr + 2.2 * big, wyr - 2.5, wxr + 2.4 * big, wyr + 1.5); g.quadraticCurveTo(wxr, wyr + 3.5, wxr - 2.4 * big, wyr + 1.5); g.fill();
     g.fillStyle = '#7aeccc'; g.beginPath(); g.ellipse(wxr, wyr, 1.8 * big, 2.7 * big, 0, 0, TAU); g.fill(); g.fillStyle = '#f4fffa'; g.beginPath(); g.ellipse(wxr, wyr + 0.3, 0.9 * big, 1.5 * big, 0, 0, TAU); g.fill();
-    for (let k = 0; k < 8; k++) { const ph = (t * 0.9 + k / 8) % 1, sd = Math.floor(t * 0.9 + k / 8), sx = wxr + Math.round((hash(k, sd) - 0.5) * 9 * (0.4 + ph)), sy = wyr - 3 - Math.round(ph * 12); if (ph < 0.9) rc(sx, sy, 1, 1, ph < 0.3 ? '#c4fff0' : ph < 0.6 ? '#7aeccc' : '#1f9a88'); }
+    const ns = stall > 0.3 ? 12 : 8; for (let k = 0; k < ns; k++) { const ph = (t * 0.9 + k / ns) % 1, sd = Math.floor(t * 0.9 + k / ns), sx = wxr + Math.round((hash(k, sd) - 0.5) * 9 * (0.4 + ph)), sy = wyr - 3 - Math.round(ph * 12); if (ph < 0.9) rc(sx, sy, 1, 1, ph < 0.3 ? '#c4fff0' : ph < 0.6 ? '#7aeccc' : '#1f9a88'); }
   }
-  if (done && ta > T_UP0) {   // the eyes: two slits that open, white and then ember, with a little glow round them. They are the figure's own, and light nothing.
-    const e = smooth(T_UP0 + 0.5, T_UP1, ta), blink = (t % 4.1) > 3.98, ey = oy + 11, c = ta < T_UP1 + 0.4 ? '#fffbd4' : '#f89a38';
+  if (done && ta > T_UP0) {   // the eyes: two slits that open, white and then ember, with a little glow round them. They glance at the wisp now and then. They are the figure's own, and light nothing.
+    const e = smooth(T_UP1 - 0.7, T_UP1, ta), blink = (t % 4.1) > 3.98, ey = oy + 11, c = ta < T_UP1 + 0.4 ? '#fffbd4' : '#f89a38', cyc = t % 6.2, look = settle > 0.5 && cyc > 2.2 && cyc < 3.6 ? 1 : 0;
     if (e > 0.05 && ey <= FEET && !blink) {
-      g.globalCompositeOperation = 'lighter'; for (const ex of [FX + 16, FX + 20]) { const gr = g.createRadialGradient(ex, ey + 0.5, 0.5, ex, ey + 0.5, 3.6); gr.addColorStop(0, `rgba(240,110,40,${0.12 * e})`); gr.addColorStop(1, 'rgba(240,110,40,0)'); g.fillStyle = gr; g.fillRect(ex - 4, ey - 4, 9, 9); } g.globalCompositeOperation = 'source-over';
-      rc(FX + 15, ey, 2, 1, c); rc(FX + 15, ey - 1, 1, 1, '#e0641e'); rc(FX + 19, ey, 2, 1, c); rc(FX + 20, ey - 1, 1, 1, '#e0641e');
+      g.globalCompositeOperation = 'lighter'; for (const ex of [FX + 16 + look, FX + 20 + look]) { const gr = g.createRadialGradient(ex, ey + 0.5, 0.5, ex, ey + 0.5, 3.6); gr.addColorStop(0, `rgba(240,110,40,${0.12 * e})`); gr.addColorStop(1, 'rgba(240,110,40,0)'); g.fillStyle = gr; g.fillRect(ex - 4, ey - 4, 9, 9); } g.globalCompositeOperation = 'source-over';
+      rc(FX + 15 + look, ey, 2, 1, c); rc(FX + 15 + look, ey - 1, 1, 1, '#e0641e'); rc(FX + 19 + look, ey, 2, 1, c); rc(FX + 20 + look, ey - 1, 1, 1, '#e0641e');
     }
   }
 }
@@ -266,7 +328,7 @@ class SigilSpinner extends HTMLElement {
     root.innerHTML = `<style>${SHEET}</style><div class="ring" role="progressbar" aria-valuemin="0" aria-valuemax="100"><canvas aria-hidden="true"></canvas></div><span class="say" role="status"></span>`;
     this._bar = root.querySelector('.ring'); this._face = root.querySelector('canvas'); this._say = root.querySelector('.say');
     this._face.width = W * UP; this._face.height = H * UP;
-    this._s = { time: LIVE.size * 1.37, p: 0, det: false, done: false, ta: 0, heat: new Array(N).fill(0) };
+    this._s = { time: LIVE.size * 1.37, p: 0, det: false, done: false, ta: 0, heat: new Array(N).fill(0), vel: 0, idle: 0, stall: 0, dm: 0 };
     this._want = null;
   }
   connectedCallback() { if (!baked) { bakeStone(); bakeFigure(); baked = true; } this._aria(); LIVE.add(this); this._render(); wake(); }
@@ -288,15 +350,19 @@ class SigilSpinner extends HTMLElement {
     if (now && v !== null && !s.done) { s.p = v; s.det = true; if (v >= 1) { this._finish(); s.ta = SETTLED + 1; } }
     this._aria();
   }
-  reset() { Object.assign(this._s, { p: 0, det: false, done: false, ta: 0 }); this._s.heat.fill(0); this._want = null; this.removeAttribute('value'); this._aria(); if (paused) this._render(); }   // back to a plain spinner, ready for the next task
+  reset() { Object.assign(this._s, { p: 0, det: false, done: false, ta: 0, vel: 0, idle: 0, stall: 0, dm: 0 }); this._s.heat.fill(0); this._want = null; this.removeAttribute('value'); this._aria(); if (paused) this._render(); }   // back to a plain spinner, ready for the next task
   get value() { return this._s.done ? 1 : this._s.det ? this._s.p : null; }   // the progress it is showing, 1 once done, or null while it only spins
   get done() { return this._s.done; }
+  get stalled() { return !this._s.done && this._s.stall > 0.5; }   // true while a value has stood still for a moment and the wisp is waiting
   _finish() { const s = this._s; s.done = true; s.p = 1; s.det = true; s.ta = 0; this._aria(); this.dispatchEvent(new CustomEvent('sigil:done', { bubbles: true, composed: true })); }
   advance(dt) {
     const s = this._s; s.time += dt;
     if (!s.done) {
-      s.det = this._want !== null;
+      s.det = this._want !== null; const was = s.p;
       s.p += clamp((s.det ? this._want : 0) - s.p, -dt * 3, dt * 1.6);   // a jump in progress is walked, not teleported
+      const speed = dt > 0 ? Math.abs(s.p - was) / dt : 0; s.vel += (speed - s.vel) * Math.min(1, dt * 8);   // how fast the wisp is travelling, for its tail
+      if (s.det && Math.abs(this._want - s.p) < 0.004 && this._want < 1) s.idle += dt; else s.idle = 0;      // how long the number has stood still
+      s.stall += (smooth(0.5, 1.2, s.idle) - s.stall) * Math.min(1, dt * 4); s.dm += ((s.det ? 1 : 0) - s.dm) * Math.min(1, dt * 7);
       if (s.det && this._want >= 1 && s.p >= 0.999) this._finish();
     } else s.ta += dt;
     // which runes are charged. With a value: the first p x 16 of them, clockwise from the top. Without one: the ones the wisp has just gone past, cooling behind it.

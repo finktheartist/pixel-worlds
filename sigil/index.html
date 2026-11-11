@@ -34,7 +34,7 @@
     <div class="text"><b>Preparing your export</b><span id="status">Working on it&hellip;</span></div>
     <button type="button">Cancel</button>
   </div>
-  <p class="hint">It plays a made-up task on a loop: first with no number, so the wisp only circles and the runes it passes flare and cool, then with a number, so the runes charge one by one, then the answer.</p>
+  <p class="hint">It plays a made-up task on a loop: first with no number, so the wisp only circles and leaves a fading comet; then with a number, so the arc and the runes fill behind the wisp; then a stall in the middle, where the wisp waits and sends out rings; then the answer.</p>
 </main>
 <script src="sigil.js"></script>
 <script>
@@ -43,7 +43,7 @@ const Q = new URLSearchParams(location.search), big = document.getElementById('s
 if (Q.get('embed') === '1') document.documentElement.classList.add('embed');   // inside the gallery: no heading of its own
 small.addEventListener('sigil:done', () => { status.textContent = 'Done. Your export is ready.'; });
 // A made-up task, as keyframes: [seconds, progress]. Before the first one there is no number at all, so it is a plain spinner. It stalls in the middle.
-const TASK = [[2.6, 0], [3.4, 0.18], [4.2, 0.42], [5.2, 0.42], [5.3, 0.7], [6.2, 0.9], [6.8, 1]], LEN = 11.5;
+const TASK = [[3, 0], [3.8, 0.18], [4.6, 0.42], [7.4, 0.42], [7.5, 0.7], [8.3, 0.9], [8.9, 1]], LEN = 17.5;
 function drive(t) {
   if (t < TASK[0][0]) { for (const el of both) el.set(null); status.textContent = 'Working on it…'; return; }
   let v = 1; for (let i = 1; i < TASK.length; i++) if (t <= TASK[i][0]) { const [t0, v0] = TASK[i - 1], [t1, v1] = TASK[i]; v = v0 + (v1 - v0) * (t - t0) / (t1 - t0); break; }
@@ -68,7 +68,7 @@ if (hold !== null) {   // ?p=0.4 holds it at 40%, ?p=spin is a plain spinner, ?p
     requestAnimationFrame(tick);
   })(start);
   // the gallery drives it through these: a number stops the demo, and demo() starts it again
-  window.sigil = { set(n) { running = false; for (const el of both) el.set(n); }, demo() { for (const el of both) el.reset(); status.textContent = 'Working on it\u2026'; start = performance.now(); running = true; } };
+  window.sigil = { set(n) { running = false; for (const el of both) el.set(n); if (n < 1) status.textContent = n === null ? 'Working on it\u2026' : Math.round(n * 100) + '% done\u2026'; }, demo() { for (const el of both) el.reset(); status.textContent = 'Working on it\u2026'; start = performance.now(); running = true; } };
 }
 </script>
 </body>
