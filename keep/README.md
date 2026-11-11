@@ -2,7 +2,7 @@
 
 A password field where strength is a castle. Every keystroke drops building pieces into a pixel-art scene. When you stop typing, a raccoon tests what you built.
 
-One of five in this repo. Same idea in each (interaction changes a pixel world), different control: this one is a text field, and the scene is assembled piece by piece instead of scrubbed.
+One of six in this repo. Same idea in each (interaction changes a pixel world), different control: this one is a text field, and the scene is assembled piece by piece instead of scrubbed.
 
 ## Run it
 

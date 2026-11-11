@@ -117,6 +117,7 @@ const ITEMS = [
   { id: 'hoard', group: 'Controls', name: 'Hoard', kind: 'Hold-to-delete button', how: 'Press and hold the button for about two seconds. Let go early and nothing is deleted.', src: '../hoard/?embed=1', own: '../hoard/', h: [164, 250], bg: CREAM, file: '../hoard/hoard.js' },
   { id: 'sage', group: 'Controls', name: 'Sage', kind: 'Agent thinking states', how: 'It plays a made-up run. Pick a state under it to hold it there.', src: '../sage/?embed=1', own: '../sage/', h: [150, 190], bg: CREAM, file: '../sage/sage.js' },
   { id: 'raven', group: 'Controls', name: 'Raven', kind: 'Send button', how: 'Click the button. The raven takes the message across to the tower, and that flight is the progress.', src: '../raven/?embed=1', own: '../raven/', h: [150, 150], bg: CREAM, file: '../raven/raven.js' },
+  { id: 'sigil', group: 'Controls', name: 'Sigil', kind: 'Loading spinner', how: 'It plays a made-up task by itself: a wisp circling, then the runes lighting as it loads, then the answer. Drag the slider under it to set the progress yourself.', src: '../sigil/?embed=1', own: '../sigil/', h: [210, 210], bg: CREAM, drive: true, driver: 'sigil', file: '../sigil/sigil.js' },
 ];
 // Prompts that hand an agent the real file and ask it to wire it in. They do not ask it to draw a dragon.
 // WORKFLOW is the skill these were made by. The prompt installs one component; the skill is how to check it, change it, or make another. Its address is worked out from wherever this page is served.
@@ -127,6 +128,16 @@ These components were made with my ${WORKFLOW.name} skill: ${WORKFLOW.url}${WORK
 If you can install skills, install it with: ${WORKFLOW.install}` : ''}
 Read it before you start. For this job, follow its "Wire it in" and "Check it" sections, and report the way its last section says. If I later ask you to change how the component looks, or to make another one in the same style, use the whole skill: it comes with the painter kit and a script for looking at the frames.` : '');
 const PROMPTS = {
+  sigil: (url) => `Add the Sigil loading spinner to my app. It is a single JavaScript file with no dependencies that defines a <sigil-spinner> element.
+
+1. Get the file from ${url} and save it in my project as sigil.js. Do not rewrite it or split it up.
+2. Load it with a plain script tag, and put <sigil-spinner label="Loading the map"></sigil-spinner> where my spinner or progress indicator goes. The label is what a screen reader hears, so say what is loading.
+3. With no value it is a plain spinner: a wisp circles the ring until my task finishes. If my task can report progress, call el.set(n) with a number from 0 to 1 as it changes (or set the value attribute), and the runes light one by one. el.set(n, true) goes straight there, and el.set(null) goes back to a plain spinner.
+4. When the task is finished, call el.set(1). The circle flares, something answers, and it settles into a done state. Listen for the "sigil:done" event on the element and carry on from there. It fires once. Call el.reset() to put it back to a spinner for the next task.
+5. It is 82 by 82 pixels and round, with clear corners. To resize it, set a CSS width on the element; a multiple of 41 pixels (41, 82, 123) keeps the pixels even. It sits inline, so it can go next to a button or in a card.
+6. It has no text and cannot be focused. The done-label attribute is what a screen reader hears when it finishes (Done by default). If my task can fail, show the error next to it and call el.reset(), because it has no failed look.
+
+When you are done, show me where you put it and where the progress number comes from. If something about it needs to look different, tell me instead of editing the painter.`,
   sage: (url) => `Add the Sage status chip to my app. It is a single JavaScript file with no dependencies that defines a <sage-status> element.
 
 1. Get the file from ${url} and save it in my project as sage.js. Do not rewrite it or split it up.
@@ -213,7 +224,7 @@ addEventListener('keydown', (e) => { if (e.target.matches('input, textarea') || 
 addEventListener('hashchange', () => { const i = ITEMS.findIndex((it) => it.id === location.hash.slice(1)); if (i >= 0) show(i, true); });
 
 // The slider drives Round through the same call a real task would use.
-const round = () => frame.contentWindow && frame.contentWindow.round;
+const round = () => frame.contentWindow && frame.contentWindow[ITEMS[at].driver || 'round'];
 $('load').addEventListener('input', () => { const r = round(); if (r) { r.set($('load').value / 100); document.querySelector('.drive output').textContent = $('load').value + '%'; } });
 $('demo').addEventListener('click', () => { const r = round(); if (r) { r.demo(); $('load').value = 0; document.querySelector('.drive output').textContent = 'demo'; } });
 

@@ -2,7 +2,7 @@
 
 A send button with a raven in it. He sits on a branch with the message at his feet. Hover and he caws. Press and he takes the message across the button to the tower window, and that flight is the progress. When he is in, the window lights with him sitting in it, and the button says it is sent.
 
-One of five in this repo. Same idea in each (the control's value changes a pixel world), different control: this one is a button that shows how far a send has got.
+One of six in this repo. Same idea in each (the control's value changes a pixel world), different control: this one is a button that shows how far a send has got.
 
 ## Run it
 

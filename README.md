@@ -4,7 +4,7 @@ Ordinary controls with a small living pixel-art scene inside them. The control's
 
 Everything is painted in code. There are no image files, no dependencies and no network requests.
 
-## The five
+## The six
 
 | | control | what happens |
 |---|---|---|
@@ -13,6 +13,7 @@ Everything is painted in code. There are no image files, no dependencies and no 
 | [Hoard](hoard/) | hold-to-delete button | A dragon asleep in the button. Hold it and the fire is the fill. |
 | [Sage](sage/) | agent thinking states | A wizard at his desk: thinking, searching, reading, running, writing, waiting for you, done, failed. |
 | [Raven](raven/) | send button | A raven carries the message across the button to a tower window. The flight is the progress. |
+| [Sigil](sigil/) | loading spinner | A wisp circles a summoning circle. Give it a value and the runes light one by one; at 100% something answers. |
 
 ## Try them
 
@@ -25,7 +26,7 @@ python3 -m http.server 8000     # from this folder
 # open http://localhost:8000/
 ```
 
-That opens the gallery, where all five are live.
+That opens the gallery, where all six are live.
 
 ## Use one
 
@@ -37,6 +38,7 @@ npx shadcn add finktheartist/pixel-worlds/round
 npx shadcn add finktheartist/pixel-worlds/hoard
 npx shadcn add finktheartist/pixel-worlds/sage
 npx shadcn add finktheartist/pixel-worlds/raven
+npx shadcn add finktheartist/pixel-worlds/sigil
 ```
 
 Or copy the file into your project by hand. Then load it with a script tag and use its element:
@@ -56,6 +58,9 @@ Or copy the file into your project by hand. Then load it with a script tag and u
 
 <script src="raven.js"></script>
 <raven-send></raven-send>
+
+<script src="sigil.js"></script>
+<sigil-spinner label="Loading"></sigil-spinner>
 ```
 
 Their READMEs list the attributes, methods and events.

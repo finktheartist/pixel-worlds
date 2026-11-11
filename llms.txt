@@ -14,8 +14,9 @@ Each is one plain script that registers a custom element. Load it with a script 
 - [Hoard](https://pixel-worlds.vercel.app/hoard/hoard.js): hold-to-delete button. `<hoard-button heading="..." warning="...">`, fires `hoard:delete` once when the hold completes. [Docs](https://github.com/finktheartist/pixel-worlds/blob/main/hoard/README.md)
 - [Sage](https://pixel-worlds.vercel.app/sage/sage.js): agent thinking states. `<sage-status state="thinking">`, then `el.set(state, label, detail)`. States: thinking, searching, reading, running, writing, waiting, done, failed. [Docs](https://github.com/finktheartist/pixel-worlds/blob/main/sage/README.md)
 - [Raven](https://pixel-worlds.vercel.app/raven/raven.js): send button. `<raven-send>`, set the `progress` attribute (0 to 1) from your own send or leave it off for a timed flight. Fires `raven:sent` once. [Docs](https://github.com/finktheartist/pixel-worlds/blob/main/raven/README.md)
+- [Sigil](https://pixel-worlds.vercel.app/sigil/sigil.js): loading spinner that is a summoning circle. `<sigil-spinner label="Loading">` is a plain spinner; `el.set(n)` with progress from 0 to 1 (or the `value` attribute) lights the runes, and `el.set(1)` finishes. Fires `sigil:done` once. 82 by 82 pixels, round, inline. [Docs](https://github.com/finktheartist/pixel-worlds/blob/main/sigil/README.md)
 
-Install any one with the shadcn CLI: `npx shadcn add finktheartist/pixel-worlds/NAME`, where NAME is keep, round, hoard, sage or raven. The file lands in `public/pixel-worlds/`.
+Install any one with the shadcn CLI: `npx shadcn add finktheartist/pixel-worlds/NAME`, where NAME is keep, round, hoard, sage, raven or sigil. The file lands in `public/pixel-worlds/`.
 
 ## The skill
 

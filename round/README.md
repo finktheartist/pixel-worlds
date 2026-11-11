@@ -2,7 +2,7 @@
 
 A loading bar that is the bar of a tavern. Seven regulars sit along it: two dwarves, an elf, a wizard, a knight and two hobbits. As the task loads, each one in turn picks up their drink and empties it. At 100% the empties go up together and come down hard.
 
-One of five in this repo. Same idea in each (the control's value changes a pixel world), different control: this one is a progress bar.
+One of six in this repo. Same idea in each (the control's value changes a pixel world), different control: this one is a progress bar.
 
 ## Run it
 

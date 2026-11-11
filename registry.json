@@ -102,6 +102,26 @@
         }
       ],
       "docs": "Keep is a plain script that registers a custom element. Load /pixel-worlds/keep.js with a script tag, then use <keep-field></keep-field>. Read el.value and el.score (0 to 1), and listen for the keep:change event. More: https://pixel-worlds.vercel.app"
+    },
+    {
+      "name": "sigil",
+      "type": "registry:file",
+      "title": "Sigil",
+      "description": "A loading spinner that is a summoning circle on a dark stone floor. A wisp circles it; give it a value and the runes light one by one; at 100% something answers. One file, no dependencies, defines <sigil-spinner>.",
+      "author": "Justin Finkelman <https://github.com/finktheartist>",
+      "categories": [
+        "spinner",
+        "progress",
+        "pixel-art"
+      ],
+      "files": [
+        {
+          "path": "sigil/sigil.js",
+          "type": "registry:file",
+          "target": "~/public/pixel-worlds/sigil.js"
+        }
+      ],
+      "docs": "Sigil is a plain script that registers a custom element. Load /pixel-worlds/sigil.js with a script tag, then use <sigil-spinner label=\"Loading\"></sigil-spinner>. With no value it is a plain spinner. Call el.set(n) with progress from 0 to 1 to light the runes, el.set(1) to finish, and listen for the sigil:done event. More: https://pixel-worlds.vercel.app"
     }
   ]
 }
