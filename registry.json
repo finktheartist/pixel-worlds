@@ -107,7 +107,7 @@
       "name": "sigil",
       "type": "registry:file",
       "title": "Sigil",
-      "description": "A loading spinner that is a summoning circle on a dark stone floor. A wisp circles it; give it a value and the runes light one by one; at 100% something answers. One file, no dependencies, defines <sigil-spinner>.",
+      "description": "A loading spinner that is a summoning circle cut into dark stone and lit only by a wisp. With no value the wisp circles the ring; give it a value and the runes charge one by one; at 100% something answers. One file, no dependencies, defines <sigil-spinner>.",
       "author": "Justin Finkelman <https://github.com/finktheartist>",
       "categories": [
         "spinner",

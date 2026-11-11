@@ -12,9 +12,10 @@
   .sub { margin: 4px 0 30px; color: #685f50; }
   .hint { margin: 26px 4px 0; color: #685f50; }
   .stage { display: flex; justify-content: center; margin: 0 0 28px; }
+  .stage sigil-spinner { width: 194px; }   /* twice its own size, so the pixels stay even */
   /* the same element at its other size, in a card beside a button, the way it would be in an interface */
-  .card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid #d8cfba; border-radius: 12px; background: #fbf7ec; }
-  .card sigil-spinner { width: 41px; flex: none; }
+  .card { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border: 1px solid #d8cfba; border-radius: 12px; background: #fbf7ec; }
+  .card sigil-spinner { width: 97px; flex: none; }
   .card .text { flex: 1; min-width: 0; }
   .card b { display: block; font-weight: 600; }
   .card span { display: block; color: #685f50; font-size: 14px; }
@@ -26,14 +27,14 @@
 <body>
 <main>
   <h1>SIGIL</h1>
-  <p class="sub">A loading spinner that is a summoning circle. A wisp circles it, and the runes light as the task loads.</p>
+  <p class="sub">A loading spinner that is a summoning circle, lit only by a wisp. The runes charge as the task loads.</p>
   <div class="stage"><sigil-spinner id="sigil" label="Summoning"></sigil-spinner></div>
   <div class="card">
     <sigil-spinner id="small" label="Preparing your export"></sigil-spinner>
     <div class="text"><b>Preparing your export</b><span id="status">Working on it&hellip;</span></div>
     <button type="button">Cancel</button>
   </div>
-  <p class="hint">It plays a made-up task on a loop: first with no number, so the wisp only circles, then with a number, so the runes light, then the answer.</p>
+  <p class="hint">It plays a made-up task on a loop: first with no number, so the wisp only circles and the runes it passes flare and cool, then with a number, so the runes charge one by one, then the answer.</p>
 </main>
 <script src="sigil.js"></script>
 <script>
