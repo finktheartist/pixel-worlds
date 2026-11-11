@@ -46,6 +46,12 @@
   .act { height: 34px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; transition: border-color .15s, background .15s; }
   .act:hover { border-color: rgba(255, 255, 255, .3); background: rgba(255, 255, 255, .04); }
   .said { color: var(--mute); font-size: 13px; }
+  .install { display: grid; gap: 6px; margin: 16px 0 0; }
+  .install div { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; }
+  .install span { flex: none; width: 8.5em; color: var(--faint); font-size: 12px; }
+  .cmd { max-width: 100%; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font: 12.5px/1.35 ui-monospace, "SF Mono", Menlo, monospace; color: var(--text); text-align: left; overflow-wrap: anywhere; transition: border-color .15s, background .15s; }
+  .cmd:hover { border-color: rgba(255, 255, 255, .3); background: rgba(255, 255, 255, .04); }
+  .cmd:focus-visible { outline: 2px solid rgba(255, 255, 255, .7); outline-offset: 2px; }
   .drive { display: flex; align-items: center; gap: 12px; flex: 1 1 260px; min-width: 0; color: var(--mute); font-size: 13px; }
   .drive input { flex: 1; min-width: 0; accent-color: #fff; }
   .drive output { min-width: 3.4em; color: var(--text); font-variant-numeric: tabular-nums; }
@@ -66,6 +72,8 @@
     .item span { display: none; }
     .head h2 { font-size: 22px; }
     .steps i { display: none; }
+    .install span { width: 100%; }
+    .cmd { font-size: 11.5px; padding: 6px 9px; }
   }
 </style>
 </head>
@@ -94,16 +102,21 @@
       <button class="act" type="button" data-copy="prompt" hidden>Copy a prompt for your agent</button>
       <span class="said" role="status"></span>
     </div>
+    <div class="install" id="install" hidden>
+      <div><span>Install it</span><button class="cmd" type="button" id="cmd-it" title="Copy this command"></button></div>
+      <div><span>Install the skill</span><button class="cmd" type="button" id="cmd-skill" title="Copy this command"></button></div>
+    </div>
   </main>
 </div>
 <script>
 // Everything in the gallery: which page to show, how tall it needs to be (wide, narrow), and the colour of the page it was made for.
 const CREAM = '#efe8d8';
 const ITEMS = [
-  { id: 'keep', group: 'Controls', name: 'Keep', kind: 'Password field', how: 'Click the field and type a password. The stronger it is, the more castle you get.', src: '../keep/', own: '../keep/', h: [560, 330], bg: CREAM },
-  { id: 'round', group: 'Controls', name: 'Round', kind: 'Loading bar', how: 'It plays a load by itself. Drag the slider under it to drive it, or click the bar to replay.', src: '../round/?embed=1', own: '../round/', h: [270, 150], bg: CREAM, drive: true },
+  { id: 'keep', group: 'Controls', name: 'Keep', kind: 'Password field', how: 'Click the field and type a password. The stronger it is, the more castle you get.', src: '../keep/?embed=1', own: '../keep/', h: [560, 330], bg: CREAM, file: '../keep/keep.js' },
+  { id: 'round', group: 'Controls', name: 'Round', kind: 'Loading bar', how: 'It plays a load by itself. Drag the slider under it to drive it, or click the bar to replay.', src: '../round/?embed=1', own: '../round/', h: [270, 150], bg: CREAM, drive: true, file: '../round/round.js' },
   { id: 'hoard', group: 'Controls', name: 'Hoard', kind: 'Hold-to-delete button', how: 'Press and hold the button for about two seconds. Let go early and nothing is deleted.', src: '../hoard/?embed=1', own: '../hoard/', h: [164, 250], bg: CREAM, file: '../hoard/hoard.js' },
   { id: 'sage', group: 'Controls', name: 'Sage', kind: 'Agent thinking states', how: 'It plays a made-up run. Pick a state under it to hold it there.', src: '../sage/?embed=1', own: '../sage/', h: [150, 190], bg: CREAM, file: '../sage/sage.js' },
+  { id: 'raven', group: 'Controls', name: 'Raven', kind: 'Send button', how: 'Click the button. The raven takes the message across to the tower, and that flight is the progress.', src: '../raven/?embed=1', own: '../raven/', h: [150, 150], bg: CREAM, file: '../raven/raven.js' },
 ];
 // Prompts that hand an agent the real file and ask it to wire it in. They do not ask it to draw a dragon.
 // WORKFLOW is the skill these were made by. The prompt installs one component; the skill is how to check it, change it, or make another. Its address is worked out from wherever this page is served.
@@ -133,6 +146,37 @@ When you are done, show me where you put it and a table of which of my agent's e
 6. Holding is the only way to confirm. If my app needs another way for people who cannot keep a key or a finger down, add a separate plain confirm and tell me.
 
 When you are done, show me where you put it and what the delete handler does. If something about it needs to look different, tell me instead of editing the painter.`,
+  keep: (url) => `Add the Keep password field to my app. It is a single JavaScript file with no dependencies that defines a <keep-field> element.
+
+1. Get the file from ${url} and save it in my project as keep.js. Do not rewrite it or split it up.
+2. Load it with a plain script tag, and use <keep-field name="password"></keep-field> where my new-password field is. With a name, what is typed is sent with the form it is in, like a plain input.
+3. Read what was typed from el.value. el.score is the strength from 0 to 1 and el.stage is 0 to 5. Listen for the "keep:change" event (e.detail is { score, stage, stageName }) if my form should react to strength. Ask me before adding any rule that blocks a weak password.
+4. Other attributes: placeholder, maxlength (40 by default) and autocomplete (new-password by default).
+5. It is as wide as its container, up to 744 pixels, and keeps its shape. It paints no background and its words are dark, so it wants a light page.
+6. The score is an estimate made in the browser. It does not replace my server's own password rules, so leave those in place.
+
+When you are done, show me where you put it and what reads the value. If something about it needs to look different, tell me instead of editing the painter.`,
+  round: (url) => `Add the Round loading bar to my app. It is a single JavaScript file with no dependencies that defines a <round-bar> element.
+
+1. Get the file from ${url} and save it in my project as round.js. Do not rewrite it or split it up.
+2. Load it with a plain script tag, and put <round-bar value="0" label="Loading"></round-bar> where my progress bar is. The label is what a screen reader hears, so say what is loading.
+3. Wire it to my real task. Call el.set(n) with the progress from 0 to 1 as often as it changes. The bar eases toward the number, so a jump still gives each drinker a turn. el.set(n, true) goes straight there.
+4. Listen for the "round:done" event on the element and move on from there. It fires once when the bar itself reaches 100%, which is a little after my task finishes, so the ending gets seen.
+5. Without a value it plays a demo load on a loop. Do not ship it in that state.
+6. It is as wide as its container and keeps a 476 by 160 shape, drawn in whole pixel steps, so it can sit a little narrower than its container. round-bar::part(bar) { margin: 0 auto; } centres it.
+
+When you are done, show me where you put it and where the progress number comes from. If something about it needs to look different, tell me instead of editing the painter.`,
+  raven: (url) => `Add the Raven send button to my app. It is a single JavaScript file with no dependencies that defines a <raven-send> element.
+
+1. Get the file from ${url} and save it in my project as raven.js. Do not rewrite it or split it up.
+2. Load it with a plain script tag, and use <raven-send></raven-send> where my send button is.
+3. Wire it to my real send. If the send can report progress, set the progress attribute (0 to 1) as it goes: the raven follows that number, and the "raven:sent" event fires once when it reaches 1. With a progress attribute a click starts nothing by itself, so listen for the click on the element and start the send there.
+4. If my send has no progress to report, leave the attribute off. A click then runs a timed flight (the duration attribute, 2.5 seconds by default). Start the real send on the click, and tell me plainly that the flight is not tied to it.
+5. Other attributes: label and sent-label for the words on the button. Call el.reset() to put the raven back for another send.
+6. The words are drawn in a caps-only pixel font on one line. Keep the label to about 12 characters. The button is 294 by 72 pixels and does not resize.
+7. It has no failed look. If my send can fail, show the error next to it and call el.reset().
+
+When you are done, show me where you put it and what starts the send. If something about it needs to look different, tell me instead of editing the painter.`,
 };
 
 const $ = (id) => document.getElementById(id), nav = document.querySelector('.rail nav'), frame = $('frame'), stage = $('stage'), said = document.querySelector('.said');
@@ -157,6 +201,7 @@ function show(i, quiet) {
   frame.classList.remove('in'); frame.title = `${it.name}, ${it.kind.toLowerCase()}`; frame.src = it.src;   // one live page at a time
   $('own').href = it.own; $('drive').hidden = $('demo').hidden = !it.drive;
   for (const b of document.querySelectorAll('[data-copy]')) b.hidden = !it.file;
+  $('install').hidden = !it.file; if (it.file) $('cmd-it').textContent = `npx shadcn add finktheartist/pixel-worlds/${it.id}`;
   said.textContent = '';
   $('load').value = 0; document.querySelector('.drive output').textContent = 'demo';
   if (!quiet) history.replaceState(null, '', '#' + it.id);
@@ -180,6 +225,11 @@ for (const b of document.querySelectorAll('[data-copy]')) b.addEventListener('cl
   const it = ITEMS[at], url = new URL(it.file, location.href).href;
   try { const text = PROMPTS[it.id](url) + withWorkflow(); await copy(text); said.textContent = `Copied the prompt, ${text.length.toLocaleString()} characters`; }
   catch { said.textContent = 'Could not copy'; }
+  setTimeout(() => { said.textContent = ''; }, 2600);
+});
+$('cmd-skill').textContent = WORKFLOW.install;
+for (const b of document.querySelectorAll('.cmd')) b.addEventListener('click', async () => {
+  try { await copy(b.textContent); said.textContent = 'Copied the command'; } catch { said.textContent = 'Could not copy'; }
   setTimeout(() => { said.textContent = ''; }, 2600);
 });
 

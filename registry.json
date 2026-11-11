@@ -9,9 +9,17 @@
       "title": "Sage",
       "description": "Agent thinking states as a status chip: a pixel-art wizard at his desk who does whatever the agent is doing. One file, no dependencies, defines <sage-status>.",
       "author": "Justin Finkelman <https://github.com/finktheartist>",
-      "categories": ["status", "agent", "pixel-art"],
+      "categories": [
+        "status",
+        "agent",
+        "pixel-art"
+      ],
       "files": [
-        { "path": "sage/sage.js", "type": "registry:file", "target": "~/public/pixel-worlds/sage.js" }
+        {
+          "path": "sage/sage.js",
+          "type": "registry:file",
+          "target": "~/public/pixel-worlds/sage.js"
+        }
       ],
       "docs": "Sage is a plain script that registers a custom element. Load /pixel-worlds/sage.js with a script tag, then use <sage-status state=\"thinking\"></sage-status> and call el.set(state, label, detail). States: thinking, searching, reading, running, writing, waiting, done, failed. More: https://pixel-worlds.vercel.app"
     },
@@ -21,11 +29,79 @@
       "title": "Hoard",
       "description": "A hold-to-delete button with a pixel-art dragon in it. Hold and the fire is the fill; hold to the end and it fires hoard:delete. One file, no dependencies, defines <hoard-button>.",
       "author": "Justin Finkelman <https://github.com/finktheartist>",
-      "categories": ["button", "confirm", "pixel-art"],
+      "categories": [
+        "button",
+        "confirm",
+        "pixel-art"
+      ],
       "files": [
-        { "path": "hoard/hoard.js", "type": "registry:file", "target": "~/public/pixel-worlds/hoard.js" }
+        {
+          "path": "hoard/hoard.js",
+          "type": "registry:file",
+          "target": "~/public/pixel-worlds/hoard.js"
+        }
       ],
       "docs": "Hoard is a plain script that registers a custom element. Load /pixel-worlds/hoard.js with a script tag, then use <hoard-button heading=\"Delete this project\" warning=\"This can't be undone.\"></hoard-button> and listen for the hoard:delete event. More: https://pixel-worlds.vercel.app"
+    },
+    {
+      "name": "raven",
+      "type": "registry:file",
+      "title": "Raven",
+      "description": "A send button with a pixel-art raven in it. He carries the message across the button to a tower window, and that flight is the progress. One file, no dependencies, defines <raven-send>.",
+      "author": "Justin Finkelman <https://github.com/finktheartist>",
+      "categories": [
+        "button",
+        "progress",
+        "pixel-art"
+      ],
+      "files": [
+        {
+          "path": "raven/raven.js",
+          "type": "registry:file",
+          "target": "~/public/pixel-worlds/raven.js"
+        }
+      ],
+      "docs": "Raven is a plain script that registers a custom element. Load /pixel-worlds/raven.js with a script tag, then use <raven-send></raven-send>. Set the progress attribute (0 to 1) from your own send, or leave it off for a timed flight on click. Listen for the raven:sent event. More: https://pixel-worlds.vercel.app"
+    },
+    {
+      "name": "round",
+      "type": "registry:file",
+      "title": "Round",
+      "description": "A loading bar that is the bar of a tavern: seven pixel-art regulars empty their cups in turn as the task loads. One file, no dependencies, defines <round-bar>.",
+      "author": "Justin Finkelman <https://github.com/finktheartist>",
+      "categories": [
+        "progress",
+        "loading",
+        "pixel-art"
+      ],
+      "files": [
+        {
+          "path": "round/round.js",
+          "type": "registry:file",
+          "target": "~/public/pixel-worlds/round.js"
+        }
+      ],
+      "docs": "Round is a plain script that registers a custom element. Load /pixel-worlds/round.js with a script tag, then use <round-bar value=\"0\" label=\"Loading\"></round-bar> and call el.set(n) with progress from 0 to 1. Listen for the round:done event. More: https://pixel-worlds.vercel.app"
+    },
+    {
+      "name": "keep",
+      "type": "registry:file",
+      "title": "Keep",
+      "description": "A password field where strength is a castle: each keystroke builds more of it, and a raccoon tests what you built. One file, no dependencies, defines <keep-field>.",
+      "author": "Justin Finkelman <https://github.com/finktheartist>",
+      "categories": [
+        "input",
+        "password",
+        "pixel-art"
+      ],
+      "files": [
+        {
+          "path": "keep/keep.js",
+          "type": "registry:file",
+          "target": "~/public/pixel-worlds/keep.js"
+        }
+      ],
+      "docs": "Keep is a plain script that registers a custom element. Load /pixel-worlds/keep.js with a script tag, then use <keep-field></keep-field>. Read el.value and el.score (0 to 1), and listen for the keep:change event. More: https://pixel-worlds.vercel.app"
     }
   ]
 }

@@ -4,7 +4,7 @@ Ordinary controls with a small living pixel-art scene inside them. The control's
 
 Everything is painted in code. There are no image files, no dependencies and no network requests.
 
-## The four
+## The five
 
 | | control | what happens |
 |---|---|---|
@@ -12,6 +12,7 @@ Everything is painted in code. There are no image files, no dependencies and no 
 | [Round](round/) | loading bar | Seven regulars along a tavern bar empty their cups in turn as the task loads. |
 | [Hoard](hoard/) | hold-to-delete button | A dragon asleep in the button. Hold it and the fire is the fill. |
 | [Sage](sage/) | agent thinking states | A wizard at his desk: thinking, searching, reading, running, writing, waiting for you, done, failed. |
+| [Raven](raven/) | send button | A raven carries the message across the button to a tower window. The flight is the progress. |
 
 ## Try them
 
@@ -24,32 +25,44 @@ python3 -m http.server 8000     # from this folder
 # open http://localhost:8000/
 ```
 
-That opens the gallery, where all four are live.
+That opens the gallery, where all five are live.
 
 ## Use one
 
-Hoard and Sage are each a single file that defines an element. Install one with the shadcn CLI, which puts the file in `public/pixel-worlds/`:
+Each one is a single file that defines an element. Install it with the shadcn CLI, which puts the file in `public/pixel-worlds/`:
 
 ```sh
-npx shadcn add finktheartist/pixel-worlds/sage
+npx shadcn add finktheartist/pixel-worlds/keep
+npx shadcn add finktheartist/pixel-worlds/round
 npx shadcn add finktheartist/pixel-worlds/hoard
+npx shadcn add finktheartist/pixel-worlds/sage
+npx shadcn add finktheartist/pixel-worlds/raven
 ```
 
-Or copy the file into your project by hand. Then:
+Or copy the file into your project by hand. Then load it with a script tag and use its element:
 
 ```html
-<script src="sage.js"></script>
-<sage-status state="thinking"></sage-status>
+<script src="keep.js"></script>
+<keep-field></keep-field>
+
+<script src="round.js"></script>
+<round-bar value="0" label="Loading"></round-bar>
 
 <script src="hoard.js"></script>
 <hoard-button heading="Delete this project" warning="This can't be undone."></hoard-button>
+
+<script src="sage.js"></script>
+<sage-status state="thinking"></sage-status>
+
+<script src="raven.js"></script>
+<raven-send></raven-send>
 ```
 
-Their READMEs list the attributes, methods and events. Keep and Round are still whole pages, not elements.
+Their READMEs list the attributes, methods and events.
 
 For agents, [llms.txt](llms.txt) lists every file and what it is.
 
-In the gallery, "Copy a prompt for your agent" gives you an install prompt that points a coding agent at the real file and tells it to wire it in, not redraw it.
+In the gallery, each one has its install line and a "Copy a prompt for your agent" button. The prompt points a coding agent at the real file and tells it to wire it in, not redraw it.
 
 ## Make your own
 

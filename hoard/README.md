@@ -2,7 +2,7 @@
 
 A hold-to-delete button with a dragon asleep in it. Hover and one eye opens. Hold and he breathes in, then the fire crosses the button, and that fire is the fill. Let go early and he swallows it and blows one smoke ring. Hold to the end and the parchment card the button sits on is scorched.
 
-One of four in this repo. Same idea in each (the control's value changes a pixel world), different control: this one is a button you hold.
+One of five in this repo. Same idea in each (the control's value changes a pixel world), different control: this one is a button you hold.
 
 ## Run it
 

@@ -333,7 +333,8 @@ button{position:relative;flex:none;width:294px;height:66px;margin:0;padding:0;bo
 button:disabled{cursor:default}`;
 // every button on the page is painted from one loop, with the same scratch canvases
 const LIVE = new Set(); let ticking = false, last = 0, baked = false;
-function loop(now) { if (!LIVE.size || HoardButton.paused) { ticking = false; return; } const dt = Math.min(0.05, (now - last) / 1000); last = now; for (const el of LIVE) el.advance(dt); requestAnimationFrame(loop); }
+// A first frame can be stamped before wake() ran, so the step is kept from going negative: time must not run backwards.
+function loop(now) { if (!LIVE.size || HoardButton.paused) { ticking = false; return; } const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; for (const el of LIVE) el.advance(dt); requestAnimationFrame(loop); }
 function wake() { if (!ticking && LIVE.size && !HoardButton.paused) { ticking = true; last = performance.now(); requestAnimationFrame(loop); } }
 class HoardButton extends HTMLElement {
   static get observedAttributes() { return ['label', 'done-label', 'heading', 'warning', 'done-heading', 'done-warning']; }

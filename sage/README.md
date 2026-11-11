@@ -2,7 +2,7 @@
 
 Thinking states for an agent. A status chip with a wizard at his desk in it, and whatever the agent is doing, he is doing.
 
-One of four in this repo. Same idea in each (the control's value changes a pixel world), different control: this one is the line that tells you what an agent is up to.
+One of five in this repo. Same idea in each (the control's value changes a pixel world), different control: this one is the line that tells you what an agent is up to.
 
 ## Run it
 

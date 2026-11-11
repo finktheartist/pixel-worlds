@@ -1,5 +1,13 @@
-// Round: a loading bar that is a tavern bar. Seven regulars drink in turn as the task loads.
-// The scene is painted smooth at 476 x 160, lit per character, then crushed to 49 colours every frame.
+// Round: a loading bar that is the bar of a tavern. Seven regulars empty their cups in turn as the task loads.
+// At 100% the empties go up together and come down hard.
+// Everything is painted in code, smooth, at 476 x 160, lit per character, then crushed to 49 colours every frame. No assets, no network.
+//
+// One file, no dependencies. Load it with a script tag and put <round-bar></round-bar> where the loading bar goes.
+// Give it value="0.4" or call el.set(0.4) with the task's progress, 0 to 1. Left alone it plays a demo load on a loop.
+// It fires "round:done" once each time real progress reaches 1.
+(() => {
+'use strict';
+if (customElements.get('round-bar')) return;   // loaded twice: the first one stands
 
 function mulberry(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 let rnd = mulberry(5);
@@ -575,25 +583,16 @@ function text(str, x, y, c, s = 1) {
 }
 const textW = (str, s = 1) => [...str].reduce((a, ch) => a + (FONT[ch][0].length + 1) * s, -s);
 
-// ───────── the take: a simulated load with one stall, then the empties come down ─────────
-const Q = new URLSearchParams(location.search), FILM = Q.get('film') === '1', FIXED = Q.get('p') !== null ? clamp(parseFloat(Q.get('p')) || 0, 0, 1) : null;
-// ?x=1 is the square cut for X: the bar in a card on a page, a cursor that starts the load, one caption and an end card
-const XCUT = Q.get('x') === '1';
-if (Q.get('embed') === '1') document.documentElement.style.background = document.body.style.background = '#efe8d8';   // inside the gallery: sit on its page colour
-const KEYS = XCUT ? [[0, 0], [1.1, 0], [4.5, 0.44], [6.3, 0.636], [7.6, 0.636], [11.3, 1]] : [[0, 0], [0.9, 0], [4.9, 0.44], [7.0, 0.636], [8.3, 0.636], [12.6, 1]];
-const T_DONE = KEYS[KEYS.length - 1][0], DUR = XCUT ? 17.8 : 16.8, T_CLICK = 1.0, T_CAP = [3.9, 4.3], T_OUT = [12.6, 13.5], T_END = 14.2;
+// ───────── the demo load: a simulated task with one stall, then the empties come down ─────────
+const KEYS = [[0, 0], [0.9, 0], [4.9, 0.44], [7.0, 0.636], [8.3, 0.636], [12.6, 1]];
+const T_DONE = KEYS[KEYS.length - 1][0], DUR = 16.8;
 function progressAt(t) {
   for (let k = 1; k < KEYS.length; k++) if (t <= KEYS[k][0]) { const [ta, pa] = KEYS[k - 1], [tb, pb] = KEYS[k]; return pa + (pb - pa) * (t - ta) / (tb - ta); }
   return 1;
 }
-const stage = document.getElementById('stage'), vctx = stage.getContext('2d');
-function fit() {
-  if (XCUT) { stage.width = stage.height = 2160; stage.style.cssText = `width:${Math.min(1080, window.innerWidth, window.innerHeight)}px;border:0;border-radius:0;max-width:none;cursor:default`; document.body.style.background = '#efe8d8'; vctx.imageSmoothingEnabled = false; return; }
-  const k = FILM ? 4 : [4, 3, 2.5, 2, 1.5, 1].find((s) => W * s <= window.innerWidth * (window.devicePixelRatio || 1) - 24) || 1;
-  stage.width = W * k; stage.height = H * k; stage.style.width = W * k / (window.devicePixelRatio || 1) + 'px';
-  vctx.imageSmoothingEnabled = false;
-}
+// One frame of the bar, painted into outC at art size. It is the same for every bar on the page: nothing in here belongs to one element.
 // time: seconds, for everything that runs on the clock. p: progress 0..1. tt: seconds since p reached 1
+// Returns 1 on the frames where a cup has just hit the bar, and the picture is shown one art pixel lower.
 function draw(time, p, tt) {
   g = sctx; g.globalAlpha = 1; g.drawImage(ROOM, 0, 0);
   const f = fire(time), sts = CREW.map((_, i) => stateFor(i, p, tt, time));
@@ -619,88 +618,79 @@ function draw(time, p, tt) {
   g = octx;
   const done = p >= 1, label = done ? 'DONE' : 'LOADING ' + Math.floor(p * 100) + '%', tw = textW(label, 2), x = Math.round(W / 2 - tw / 2), flash = done && tt > T_SLAM + 0.42 && tt < T_SLAM + 0.75;
   text(label, x + 1, CT + 14, '#07060b', 2); text(label, x, CT + 13, flash ? '#fff6d0' : done ? '#fbe09a' : '#b98470', 2);
-  stage.setAttribute('aria-valuenow', Math.round(p * 100));
-  if (XCUT) return blitX(time, p, tt, rattle);
-  const k = stage.width / W;
-  if (rattle) { vctx.fillStyle = '#040306'; vctx.fillRect(0, 0, stage.width, k); vctx.drawImage(outC, 0, 0, W, H - 1, 0, k, stage.width, stage.height - k); }
-  else vctx.drawImage(outC, 0, 0, stage.width, stage.height);
+  return rattle;
 }
-// The square cut: the bar whole, in a card on a page, the way Keep is shown. A cursor comes in, presses the button under it, and the load runs.
-const SANS = '-apple-system, "Helvetica Neue", "Segoe UI", sans-serif', MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
-const INK = '#26221c', PAGE = '#efe8d8', PAPER = '#fffdf6';
-const CARD = { x: 64, y: 400, w: 952, bar: 320, foot: 104, r: 26 }, BTN = { x: 64 + 26, y: 400 + 320 + 24, w: 236, h: 56 };
-let heldP = -1, heldT = 0;
-function blitX(time, p, tt, rattle) {
-  const c = vctx, u = stage.width / 1080, end = smooth(T_END, T_END + 0.5, time), lerp = mix;
-  if (p !== heldP || time < heldT) { heldP = p; heldT = time; }
-  const started = time >= T_CLICK, done = p >= 1, stalled = started && !done && p > 0 && time - heldT > 0.12;
-  // the cursor: in from the corner on a slowing curve, press, drift aside, out off the bottom
-  const P0 = { x: 930, y: 1150 }, P1 = { x: BTN.x + BTN.w * 0.86, y: BTN.y + BTN.h * 0.66 }, P2 = { x: 742, y: 936 };
-  const tr = 0.9 * Math.sin(time * 6.1) + 0.6 * Math.sin(time * 11.3 + 1), down = time >= T_CLICK - 0.1 && time < T_CLICK + 0.06;
-  let mx, my;
-  if (time < T_CLICK + 0.15) { const q = clamp((time - 0.15) / (T_CLICK - 0.3), 0, 1), e = 1 - (1 - q) ** 3; mx = lerp(P0.x, P1.x, e) - Math.sin(q * Math.PI) * 34; my = lerp(P0.y, P1.y, e); }
-  else { const q = smooth(T_CLICK + 0.15, T_CLICK + 1.1, time), out = smooth(T_OUT[0], T_OUT[1], time); mx = lerp(P1.x, P2.x, q) + tr; my = lerp(P1.y, P2.y, q) + tr * 0.7 + 420 * out * out; }
 
-  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = PAGE; c.fillRect(0, 0, stage.width, stage.height);
-  c.setTransform(u, 0, 0, u, 0, 0);
-  const rr = (x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
-  const sp = (v) => { if ('letterSpacing' in c) c.letterSpacing = v + 'px'; };
-  // card: hard shadow, the bar on top, a strip of paper under it for the button and the state
-  const ch = CARD.bar + CARD.foot, cy = CARD.y + (rattle ? 3 : 0);
-  c.fillStyle = INK; rr(CARD.x, CARD.y + 11, CARD.w, ch, CARD.r); c.fill();
-  c.fillStyle = PAPER; rr(CARD.x, cy, CARD.w, ch, CARD.r); c.fill();
-  c.save(); rr(CARD.x, cy, CARD.w, ch, CARD.r); c.clip();
-  c.imageSmoothingEnabled = false; c.drawImage(outC, 0, 0, W, H, CARD.x, cy, CARD.w, CARD.bar);
-  c.fillStyle = INK; c.fillRect(CARD.x, cy + CARD.bar - 1.5, CARD.w, 3);
-  c.restore();
-  c.strokeStyle = INK; c.lineWidth = 3; rr(CARD.x, cy, CARD.w, ch, CARD.r); c.stroke();
-  // the button, and what the task says it is doing
-  const by = BTN.y + (cy - CARD.y) + (down ? 4 : 0), idle = !started, again = done && tt > T_SLAM + 0.9;
-  c.fillStyle = INK; rr(BTN.x, BTN.y + (cy - CARD.y) + 5, BTN.w, BTN.h, 28); c.fill();
-  c.fillStyle = idle || again ? '#e0bd3c' : PAPER; rr(BTN.x, by, BTN.w, BTN.h, 28); c.fill(); c.strokeStyle = INK; c.lineWidth = 3; c.stroke();
-  c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `600 25px ${SANS}`; sp(0.2); c.fillStyle = idle || again ? INK : 'rgba(38,34,28,.5)';
-  c.fillText(idle ? 'Run the task' : again ? 'Run it again' : 'Running', BTN.x + BTN.w / 2, by + BTN.h / 2 + 1);
-  c.textAlign = 'right'; c.font = `700 22px ${MONO}`; sp(2.5); c.fillStyle = stalled ? '#c2452f' : INK;
-  c.fillText(idle ? 'IDLE' : done ? 'DONE' : stalled ? 'STALLED' : 'LOADING', CARD.x + CARD.w - 30, cy + CARD.bar + CARD.foot / 2 + 1);
-  // one caption, one end card
-  c.textAlign = 'center';
-  const a = smooth(0.15, 0.5, time) * (1 - smooth(T_CAP[0], T_CAP[1], time));
-  if (a > 0) { c.font = `600 46px ${SANS}`; sp(0.3); c.fillStyle = `rgba(38,34,28,${a})`; c.fillText('a loading bar that is a bar', 540, CARD.y - 106); }
-  if (end > 0) {
-    c.font = `700 70px ${MONO}`; sp(20); c.fillStyle = `rgba(38,34,28,${end})`; c.fillText('ROUND', 550, CARD.y - 138);
-    c.font = `500 32px ${SANS}`; sp(0.3); c.fillStyle = `rgba(104,95,80,${end})`; c.fillText('the bar fills as they empty', 540, CARD.y - 59);
+// ───────── the element ─────────
+const SHEET = ':host{display:block}:host([hidden]){display:none}canvas{display:block;max-width:100%;height:auto;image-rendering:pixelated}';
+const SCALES = [4, 3, 2.5, 2, 1.5, 1];   // canvas pixels per art pixel: the largest that fits is used
+// every bar on the page is painted from one loop, with the same baked layers, pose cache and scratch canvases
+const LIVE = new Set(); let ticking = false, last = 0, baked = false, paused = false;
+function loop(now) { if (!LIVE.size || paused) { ticking = false; return; } const dt = Math.max(0, (now - last) / 1000); last = now; for (const el of LIVE) el._step(dt, Math.min(0.1, dt)); requestAnimationFrame(loop); }
+function wake() { if (!ticking && LIVE.size && !paused) { ticking = true; last = performance.now(); requestAnimationFrame(loop); } }
+addEventListener('resize', () => { for (const el of LIVE) el._fit(); });   // a zoom changes the pixel ratio without always changing the element's width
+class RoundBar extends HTMLElement {
+  static get observedAttributes() { return ['value', 'label']; }
+  static get paused() { return paused; }
+  static set paused(v) { paused = !!v; wake(); }   // true stops the clock, so you can step a bar yourself with el.advance(seconds)
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    root.innerHTML = `<style>${SHEET}</style><canvas part="bar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="cursor:pointer"></canvas>`;
+    this._cv = root.querySelector('canvas'); this._vctx = this._cv.getContext('2d');
+    // What belongs to this bar. target: the value it was last given, or null while it plays the demo. shown: the progress it is showing.
+    // time: its own clock, in seconds. demo: how far into the demo load it is. doneAt: its clock when shown reached 1. full: whether it has said so.
+    this._s = { target: null, shown: 0, time: 0, demo: 0, doneAt: null, full: false };
+    this._k = 0; this._w = 0; this._dpr = 0; this._pc = 0;
+    this._cv.addEventListener('click', () => { if (this._s.target === null) this.demo(); });   // a click replays the demo; it never touches a real load
+    this._ro = new ResizeObserver((e) => this._fit(e[e.length - 1].contentRect.width));
   }
-  sp(0);
-  if (time >= 0.15 && time <= T_OUT[1]) {
-    const rp = time - T_CLICK;
-    if (rp >= 0 && rp < 0.45) { c.strokeStyle = `rgba(38,34,28,${0.5 * (1 - rp / 0.45)})`; c.lineWidth = 3; c.beginPath(); c.arc(mx, my, 8 + rp * 80, 0, Math.PI * 2); c.stroke(); }
-    const s = 1.87 * (down ? 0.88 : 1);
-    c.save(); c.translate(mx, my); c.scale(s, s);
-    c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 26); c.lineTo(6.5, 20.5); c.lineTo(11, 31); c.lineTo(15.5, 29); c.lineTo(11, 18.5); c.lineTo(19, 18.5); c.closePath();
-    c.shadowColor = 'rgba(38,34,28,0.35)'; c.shadowBlur = 0; c.shadowOffsetX = 3 * u; c.shadowOffsetY = 4 * u; c.fillStyle = '#ffffff'; c.fill();
-    c.shadowColor = 'transparent'; c.strokeStyle = INK; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke();
-    c.restore();
+  connectedCallback() { if (!baked) { bake(); baked = true; } LIVE.add(this); this._ro.observe(this); this._fit(this.clientWidth); wake(); }
+  disconnectedCallback() { LIVE.delete(this); this._ro.disconnect(); }
+  attributeChangedCallback(name, was, v) {
+    if (name === 'label') this._cv.setAttribute('aria-label', v || 'Loading');
+    else if (v === null) this.demo(); else this.set(v);
   }
-  c.setTransform(1, 0, 0, 1, 0, 0);
+  _fit(w) {   // the largest scale whose canvas fits this element's width in device pixels, shown at one canvas pixel per device pixel
+    if (w !== undefined) this._w = w;
+    const dpr = window.devicePixelRatio || 1, k = SCALES.find((s) => W * s <= Math.round(this._w * dpr)) || 1, cv = this._cv;
+    if (k === this._k && dpr === this._dpr) return;
+    this._k = k; this._dpr = dpr; cv.width = W * k; cv.height = H * k; cv.style.width = W * k / dpr + 'px'; this._vctx.imageSmoothingEnabled = false;
+    this._paint();
+  }
+  // set(0.37): the task's progress, 0 to 1, as often as you like. The bar eases toward it, so a jump from 10% to 60% still gives each drinker a turn.
+  // set(0.37, true) goes straight there instead. At 1 that is the settled end, with the cups already down.
+  set(v, jump) {
+    const s = this._s; s.target = clamp(+v || 0, 0, 1); this._cv.style.cursor = '';
+    if (jump) { s.shown = s.target; s.doneAt = s.target < 1 ? null : s.time - 9; this._paint(); }
+  }
+  demo() { Object.assign(this._s, { target: null, shown: 0, demo: 0, doneAt: null }); this._cv.style.cursor = 'pointer'; }   // play the demo load from the start, on a loop
+  get value() { const s = this._s; return s.target === null ? null : s.shown; }   // the progress it is showing, or null while it plays the demo
+  set value(v) { if (v === null || v === undefined) this.demo(); else this.set(v); }
+  get demoLength() { return DUR; }   // seconds in one demo load
+  advance(seconds) { const dt = Math.max(0, +seconds || 0); this._step(dt, dt); }   // move this bar's clock on and paint it
+  _step(dt, ease) {
+    const s = this._s; s.time += dt;
+    if (s.target === null) s.demo += dt;
+    else {   // eased toward the reported value
+      const d = s.target - s.shown, r = Math.max(0.25, Math.abs(d) * 2) * ease; s.shown += clamp(d, -r, r);
+      if (s.shown < 1) s.doneAt = null; else if (s.doneAt === null) s.doneAt = s.time;
+    }
+    this._paint();
+  }
+  _paint() {
+    const s = this._s, cv = this._cv, v = this._vctx; let time, p, tt;
+    if (s.target === null) { time = s.demo % (DUR + 1); p = progressAt(time); tt = time - T_DONE; }
+    else { time = s.time; p = s.shown; tt = s.doneAt === null ? -1 : s.time - s.doneAt; }
+    if (this._k) {   // it has a canvas to paint once it has been on a page
+      const rattle = draw(time, p, tt), k = cv.width / W;
+      if (rattle) { v.fillStyle = '#040306'; v.fillRect(0, 0, cv.width, k); v.drawImage(outC, 0, 0, W, H - 1, 0, k, cv.width, cv.height - k); }
+      else v.drawImage(outC, 0, 0, cv.width, cv.height);
+    }
+    const pc = Math.round(p * 100); if (pc !== this._pc) { this._pc = pc; cv.setAttribute('aria-valuenow', pc); }
+    const full = s.target !== null && p >= 1, say = full && !s.full; s.full = full;   // the demo is not a real load, so it does not say it is done
+    if (say) this.dispatchEvent(new CustomEvent('round:done', { bubbles: true, composed: true }));
+  }
 }
-bake(); fit();
-let T = 0;
-window.addEventListener('resize', () => { fit(); if (FILM) draw(T, progressAt(T), T - T_DONE); });
-if (FILM) { window.__film = { duration: DUR, step(fps = 60) { T += 1 / fps; draw(T, progressAt(T), T - T_DONE); return T; } }; draw(0, 0, -T_DONE); }
-else {
-  // Left alone, it plays the demo load on a loop. Call round.set(0..1) with real progress and it follows that instead.
-  let t0 = performance.now(), last = t0, shown = 0, target = null, doneAt = 0;
-  window.round = { set(v) { target = clamp(+v || 0, 0, 1); }, demo() { target = null; shown = 0; doneAt = 0; t0 = performance.now(); }, get value() { return target === null ? null : shown; } };
-  stage.addEventListener('click', () => { if (target === null) window.round.demo(); });   // a click replays the demo; it never touches a real load
-  const loop = (now) => {
-    const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    if (FIXED !== null) draw(now / 1000, FIXED, 9);
-    else if (target !== null) {   // eased toward the reported value, so a jump still gives each drinker a turn
-      const d = target - shown, r = Math.max(0.25, Math.abs(d) * 2) * dt; shown += clamp(d, -r, r);
-      if (shown < 1) doneAt = 0; else if (!doneAt) doneAt = now;
-      draw(now / 1000, shown, doneAt ? (now - doneAt) / 1000 : -1);
-    } else { const t = ((now - t0) / 1000) % (DUR + 1); draw(t, progressAt(t), t - T_DONE); }
-    requestAnimationFrame(loop);
-  };
-  requestAnimationFrame(loop);
-}
+customElements.define('round-bar', RoundBar);
+})();

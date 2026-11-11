@@ -367,7 +367,8 @@ const fitText = (str, n) => (str.length > n ? str.slice(0, n - 2) + '..' : str);
 const RUN = [[2.6, 'thinking', '', 'Planning'], [3.2, 'searching', '', '3 sources'], [3.2, 'reading', '', 'README.md'], [3, 'running', '', 'npm test'], [2.8, 'failed', '', 'Exit code 1'], [2.2, 'thinking', '', 'Trying again'], [2.8, 'running', '', 'npm test'], [3.4, 'writing', '', 'app.js'], [4, 'waiting', '', 'Approve the edit'], [4.6, 'done', '', '9 steps, 32s']];
 // every chip on the page is painted from one loop, with the same scratch canvases
 const LIVE = new Set(); let ticking = false, last = 0, baked = false;
-function loop(now) { if (!LIVE.size || SageStatus.paused) { ticking = false; return; } const dt = Math.min(0.05, (now - last) / 1000); last = now; for (const el of LIVE) el.advance(dt); requestAnimationFrame(loop); }
+// A first frame can be stamped before wake() ran, so the step is kept from going negative: time must not run backwards.
+function loop(now) { if (!LIVE.size || SageStatus.paused) { ticking = false; return; } const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; for (const el of LIVE) el.advance(dt); requestAnimationFrame(loop); }
 function wake() { if (!ticking && LIVE.size && !SageStatus.paused) { ticking = true; last = performance.now(); requestAnimationFrame(loop); } }
 const SHEET = ':host{display:inline-block;position:relative;width:306px;max-width:100%;aspect-ratio:204/48;vertical-align:middle}canvas{display:block;width:100%;height:100%;image-rendering:pixelated}span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}';
 class SageStatus extends HTMLElement {
