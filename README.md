@@ -13,7 +13,7 @@ Everything is painted in code. There are no image files, no dependencies and no 
 | [Hoard](hoard/) | hold-to-delete button | A dragon asleep in the button. Hold it and the fire is the fill. |
 | [Sage](sage/) | agent thinking states | A wizard at his desk: thinking, searching, reading, running, writing, waiting for you, done, failed. |
 | [Raven](raven/) | send button | A raven carries the message across the button to a tower window. The flight is the progress. |
-| [Sigil](sigil/) | loading spinner | A wisp is the only light in a dark summoning circle. Give it a value and the runes charge one by one; at 100% something answers. |
+| [Sigil](sigil/) | loading spinner | A wisp lights a slate-blue summoning circle. Give it a value and the runes charge one by one; at 100% something answers. |
 
 ## Try them
 

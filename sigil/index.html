@@ -21,6 +21,7 @@
   .card span { display: block; color: #685f50; font-size: 14px; }
   .card button { flex: none; height: 36px; padding: 0 14px; border: 1px solid #cfc5ae; border-radius: 8px; background: #fff; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; }
   .card button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .dark { --ink: #e9eaed; --page: #0b0c10; } .dark .sub, .dark .hint, .dark .card span { color: #8d919a; } .dark .card { background: #15171d; border-color: #2a2d36; } .dark .card button { background: #1c1f27; border-color: #2a2d36; color: var(--ink); }   /* ?bg=dark: the same page on a dark ground */
   .clip body { min-height: 100vh; place-items: center; } .clip main { width: 500px; padding: 0; } .clip h1, .clip .sub, .clip .hint { display: none; } .clip .stage { margin-bottom: 24px; }   /* ?zoom=2: for recording, centred on the page */
   .embed body { place-items: start center; min-height: 0; } .embed main { width: calc(100vw - 16px); padding: 10px 0 0; } .embed h1, .embed .sub, .embed .hint { display: none; } .embed .stage { margin-bottom: 18px; }
 </style>
@@ -28,7 +29,7 @@
 <body>
 <main>
   <h1>SIGIL</h1>
-  <p class="sub">A loading spinner that is a summoning circle, lit only by a wisp. The runes charge as the task loads.</p>
+  <p class="sub">A loading spinner that is a summoning circle with a wisp for a light. The runes charge as the task loads.</p>
   <div class="stage"><sigil-spinner id="sigil" label="Summoning"></sigil-spinner></div>
   <div class="card">
     <sigil-spinner id="small" label="Preparing your export"></sigil-spinner>
@@ -42,6 +43,7 @@
 // This page's own wiring. The component is all in sigil.js.
 const Q = new URLSearchParams(location.search), big = document.getElementById('sigil'), small = document.getElementById('small'), status = document.getElementById('status'), both = [big, small];
 if (Q.get('embed') === '1') document.documentElement.classList.add('embed');   // inside the gallery: no heading of its own
+if (Q.get('bg') === 'dark') document.documentElement.classList.add('dark');
 if (Q.get('zoom')) { document.querySelector('main').style.zoom = parseFloat(Q.get('zoom')) || 1; document.documentElement.classList.add('clip'); }   // for recording a clip: ?zoom=2 doubles the page, so the pixels stay even
 small.addEventListener('sigil:done', () => { status.textContent = 'Done. Your export is ready.'; });
 small.addEventListener('sigil:fail', () => { status.textContent = 'Failed. Try again.'; });

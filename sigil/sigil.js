@@ -1,8 +1,9 @@
-// Sigil: a loading spinner that is a summoning circle cut into a dark stone floor, lit by one thing: a will-o'-wisp.
-// With no value the wisp circles the ring. The stone shows only where it is: the grooves catch its light and throw shadows,
-// and the runes it passes ignite and cool behind it. Give it a value (0 to 1) and the runes stay charged one by one, clockwise from the top.
-// At 100% the wisp spirals into the middle and flares, the floor answers, and something climbs out of it and takes the light in its hand.
-// Everything is painted in code at 97 x 97: a height map of the stone, lit per pixel by the wisp, then crushed to a fixed palette. No assets, no network.
+// Sigil: a loading spinner that is a summoning circle cut into a slate-blue stone floor, with a will-o'-wisp for a light.
+// With no value the wisp circles the ring on its own and leaves a comet of ring and runes igniting and cooling behind it.
+// Give it a value (0 to 1) and the wisp becomes the head of an arc that fills clockwise from the top, with the runes charging behind it.
+// A value that stands still shows as waiting. At 100% the wisp dives into the middle and flares, and something climbs out of the floor and takes the light in its hands.
+// If the task fails, el.fail() cracks the stone and the circle smoulders.
+// Everything is painted in code at 97 x 97: a height map of the stone under a cool ambient, lit per pixel by the wisp (grooves catch it and throw shadows), then crushed to a fixed palette. No assets, no network.
 //
 // One file, no dependencies. Load it with a script tag and put <sigil-spinner></sigil-spinner> where the spinner goes.
 // It fires "sigil:done" once, when the circle is answered.
@@ -21,6 +22,7 @@ const PAL = [
   '#020307', '#05060b', '#090b13', '#0e111c', '#141928', '#1b2236', '#242d46', '#2f3b5a', '#3d4d72', '#516590', '#6c83ad',   // the stone, cold
   '#0a0813', '#110d20',                                                                                                    // the stone in deep shadow, a little violet
   '#04100f', '#071a1b', '#0b2628', '#103639', '#16494c', '#1f6064', '#2c7c7e', '#40999a', '#5fb8b4', '#8adbd0',            // the stone with the wisp on it
+  '#a6b0d2', '#c6cde4', '#2a4a5c', '#386478', '#4c8296', '#68a2b2',                                                       // pale stone for the rim, and mid stone with the wisp on it
   '#0f4a4a', '#14706a', '#1f9a88', '#38c4a6', '#7aeccc', '#c4fff0', '#f4fffa',                                            // the wisp itself
   '#3a0a08', '#7c1e12', '#b8421a', '#e0641e', '#f89a38', '#fbe88a',                                                       // ember: eyes
   '#030206', '#08060e', '#4a4038', '#8a7c68',                                                                              // the figure, and horn
@@ -91,7 +93,7 @@ function bakeStone() {
     ring(x, 9, 1.4); ring(x, 6.4, 0.8);
   });
   const RM = Array.from({ length: N }, (_, i) => maskOf(W, H, (x) => {
-    x.save(); x.translate(CX, CX); x.rotate(RUNE_A(i)); x.translate(0, -R_RUNE); x.scale(1.2, 1.2); x.lineWidth = 1.2 / 1.2 * 1.05;
+    x.save(); x.translate(CX, CX); x.rotate(RUNE_A(i)); x.translate(0, -R_RUNE); x.scale(1.25, 1.25); x.lineWidth = 1.45 / 1.25;
     for (const st of RUNES[i]) { x.beginPath(); st.forEach(([px, py], q) => (q ? x.lineTo(px - 2, py - 3.5) : x.moveTo(px - 2, py - 3.5))); x.stroke(); } x.restore();
   }));
   CRKW = maskOf(W, H, (x) => { CRACK.forEach((pts, i) => { x.lineWidth = i ? 0.9 : 1.3; x.beginPath(); pts.forEach(([px, py], q) => (q ? x.lineTo(px, py) : x.moveTo(px, py))); x.stroke(); }); }); CRKB = boxBlur(CRKW, W, H, 2);
@@ -124,7 +126,7 @@ function bakeStone() {
     let h = 0.45 * smooth(0, 7, dj) + 0.22 * (vnoise(x * 0.07, y * 0.07) - 0.5) - 0.8 * jd - 2.5 * DS[p] - 1.5 * CKS[p] - 1.2 * PTS[p];
     h += 1.5 * smooth(43.4, 45.4, d) - 4.5 * smooth(46, 47.6, d);   // a raised lip round the edge, and the drop outside it
     HT[p] = h;
-    const mott = 0.82 + 0.3 * vnoise(x * 0.05 + 9, y * 0.05), dark = (1 - 0.4 * jd) * (1 - 0.8 * D[p]) * (1 - 0.7 * CKS[p]) * (1 - 0.5 * PTS[p]) * (1 - 0.65 * smooth(44.6, 47.6, d));
+    const mott = 0.82 + 0.3 * vnoise(x * 0.05 + 9, y * 0.05), dark = (1 - 0.4 * jd) * (1 - 0.8 * D[p]) * (1 - 0.7 * CKS[p]) * (1 - 0.5 * PTS[p]) * (1 + 0.5 * smooth(43.2, 44.6, d) * (1 - smooth(45.6, 46.4, d))) * (1 - 0.7 * smooth(46.3, 47.5, d));   // a pale bevel round the edge, then a dark outline
     AR[p] = (108 + tint * 22) * mott * dark; AG[p] = (118 + tint * 14) * mott * dark; AB[p] = (146 - tint * 10) * mott * dark;
     SP[p] = 0.22 + 0.5 * vnoise(x * 0.06 + 3, y * 0.06 + 11);   // damp patches shine more
   }
@@ -193,15 +195,16 @@ function wispAt(s) {   // { x, y, z, I, a }: where the light is, how high above 
     const ta = s.ta, f = flashAt(s), settle = smooth(T_HAND0, SETTLED, ta);
     if (ta < T_DIVE) { const [dx, dy, u] = divePos(ta); x = dx; y = dy; z += 3 * u; I = fl * (1.2 + 1.5 * u) * (ta < T_RING ? 0.9 + 0.5 * smooth(0, T_RING, ta) : 1); }
     else { const v = smooth(T_HAND0, T_HAND1, ta); x = mix(C, HX, v); y = mix(C + 3, HY, v) + (ta > T_HAND1 ? bob * 0.6 : 0); z = mix(14, 9, v) + Math.sin(t * 3) * 0.5; I = fl * mix(1.7, 1.2, settle) * (1 + 0.1 * settle * Math.sin(t * 1.7)); }
-    I = I * (1 - 0.9 * dimAt(s)) + 2.0 * f * fl;
+    I = I * (1 - 0.9 * dimAt(s)) + 1.6 * f * fl;
   }
   return { x, y, z, I, a };
 }
 
 // ───────── the scene: one light, put on every pixel of the stone ─────────
-const AMB = [0.036, 0.045, 0.078], SF = [0.07, 0.15, 0.27, 0.42, 0.6], AMP = 2.1, R0 = 21, RMAX = 62;
+const AMB = [0.36, 0.40, 0.54], FAMB = [0.054, 0.0675, 0.117], SF = [0.07, 0.15, 0.27, 0.42, 0.6], AMP = 2.1, R0 = 21, RMAX = 62;
 const IMG = sctx.createImageData(W, H), OUT = IMG.data;
 const MOTES = Array.from({ length: 26 }, (_, k) => [hash(k, 1) * 70 + 13, hash(k, 2) * 60 + 18, 0.6 + hash(k, 3) * 1.1, hash(k, 4) * TAU]);
+const EGAIN = 1.35;
 let ER = 0, EG = 0, EB = 0, TR = 0, TG = 0, TB = 0, TW = 0;
 function tone(r, g, b) {   // light to colour. Each channel rolls off on its own, which goes white when it is bright; in the flare (TW) it keeps its hue, so the blast stays a bright teal and the stone shows through it
   const pr = 1 - Math.exp(-1.25 * r), pg = 1 - Math.exp(-1.25 * g), pb = 1 - Math.exp(-1.25 * b);
@@ -210,7 +213,7 @@ function tone(r, g, b) {   // light to colour. Each channel rolls off on its own
 }
 function emit(gl, w) {   // something that glows by itself: dim and teal at first, then white-hot. It adds to ER, EG, EB
   const hot = Math.max(0, gl - 0.62) * 2.6, tw = Math.min(1, gl * 1.5);
-  ER += w * (0.08 * tw + 0.8 * hot); EG += w * (0.85 * tw + 0.5 * hot); EB += w * (0.7 * tw + 0.5 * hot);
+  ER += w * (0.08 * tw + 0.5 * hot) * EGAIN; EG += w * (0.85 * tw + 0.5 * hot) * EGAIN; EB += w * (0.7 * tw + 0.5 * hot) * EGAIN;   // on a lighter stone the glow needs a little more to read
 }
 const FLARE = new Float32Array(N), STAR_LV = new Float32Array(5);
 const EMBER = [1, 0.42, 0.16];   // what the light turns into when it has failed
@@ -226,6 +229,7 @@ function scene(s) {
   for (let i = 0; i < N; i++) FLARE[i] = done && ta < 0.8 ? 1.1 * Math.exp(-(((ta - 0.04 - i * 0.027) / 0.07) ** 2)) : 0;   // a flash that runs round the runes in turn, clockwise from the top
   for (let k = 0; k < 5; k++) STAR_LV[k] = failed ? 0.2 * smooth(0.2, 1.0, tf) * (0.8 + 0.2 * Math.sin(t * 1.1 + k)) : done ? smooth(T_RING + 0.1 + k * 0.12, T_RING + 0.3 + k * 0.12, ta) * (mix(1, 0.3 + 0.1 * Math.sin(t * 1.5 + k * 1.3), settle) + 0.9 * flash) * (1 - 0.85 * dim) : 0;   // the star is drawn, a stroke at a time
   TW = clamp(flash * 1.6, 0, 1);
+  const aF = 1 - 0.6 * dim - 0.3 * flash - 0.3 * FM, A0 = AMB[0] * aF, A1 = AMB[1] * aF, A2 = AMB[2] * aF;   // the cool ambient dips for the breath in and the blast, and cools when it fails
   const amp = AMP * I, pingR = ((t % 2.1) / 2.1), pingA = stall * (1 - pingR) * (1 - pingR) * 1.0;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const p = y * W + x, o = p * 4; if (!DISC[p]) { OUT[o] = OUT[o + 1] = OUT[o + 2] = 0; OUT[o + 3] = 255; continue; }
@@ -239,7 +243,7 @@ function scene(s) {
     }
     const hot = Math.min(1, att * I * 0.9), lr = mix(mix(0.32, 0.72, hot), EMBER[0], FM), lg = mix(1, EMBER[1], FM), lb = mix(mix(0.82, 0.95, hot), EMBER[2], FM), haze = 0.09 * I / (1 + dxy2 / 60);   // the light is teal, and whiter at its heart; some of it hangs in the air
     const ch = crk > 0 ? 1 - 0.55 * crk * CRKB[p] : 1;
-    let r = ch * AR[p] * (AMB[0] + lr * diff) / 255 + lr * (spec + haze * 0.4), gg = ch * AG[p] * (AMB[1] + lg * diff) / 255 + lg * (spec + haze), b = ch * AB[p] * (AMB[2] + lb * diff) / 255 + lb * (spec + haze * 0.85);
+    let r = ch * AR[p] * (A0 + lr * diff) / 255 + lr * (spec + haze * 0.4), gg = ch * AG[p] * (A1 + lg * diff) / 255 + lg * (spec + haze), b = ch * AB[p] * (A2 + lb * diff) / 255 + lb * (spec + haze * 0.85);
     ER = EG = EB = 0;
     // the runes: charged ones glow in their grooves, most where the wisp is. In a plain spin, the ones it passes ignite and cool behind it.
     const id = RID[p], bid = RBI[p];
@@ -277,7 +281,7 @@ function scene(s) {
         const sxs = clamp(sx - shift, 0, SW - 1), i = sy * SW + sxs, a = CAA[i]; if (a < 0.05) continue; const x = FX + sx; if (x < 0 || x >= W) continue;
         const dx = wx - x, dy = wy - y, dz = wz - 2 - CHT[i], d2 = dx * dx + dy * dy + dz * dz, inv = 1 / Math.sqrt(d2), nl = Math.max(0, CNX[i] * dx * inv + CNY[i] * dy * inv + CNZ[i] * dz * inv), win = 1 - Math.min(1, d2 / (RMAX * RMAX)), att = (win * win) / (1 + d2 / (R0 * R0));
         const df = nl * att * amp * 2.4, hot = Math.min(1, att * I * 0.9), lr = mix(mix(0.32, 0.72, hot), EMBER[0], FM), lg = mix(1, EMBER[1], FM), lb = mix(mix(0.82, 0.95, hot), EMBER[2], FM), rimv = Math.pow(1 - CNZ[i], 2) * att * amp * 2.2;   // the edge facing the light catches it
-        const r = CAL[i * 4] * (AMB[0] * 1.5 + lr * (df + rimv * 0.5)) / 255, gg = CAL[i * 4 + 1] * (AMB[1] * 1.5 + lg * (df + rimv)) / 255, b = CAL[i * 4 + 2] * (AMB[2] * 1.5 + lb * (df + rimv * 0.9)) / 255, o = (y * W + x) * 4;
+        const r = CAL[i * 4] * (FAMB[0] + lr * (df + rimv * 0.5)) / 255, gg = CAL[i * 4 + 1] * (FAMB[1] + lg * (df + rimv)) / 255, b = CAL[i * 4 + 2] * (FAMB[2] + lb * (df + rimv * 0.9)) / 255, o = (y * W + x) * 4;
         tone(r, gg, b); OUT[o] += a * (TR - OUT[o]); OUT[o + 1] += a * (TG - OUT[o + 1]); OUT[o + 2] += a * (TB - OUT[o + 2]);
       }
     }
