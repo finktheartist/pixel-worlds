@@ -121,7 +121,7 @@
           "target": "~/public/pixel-worlds/sigil.js"
         }
       ],
-      "docs": "Sigil is a plain script that registers a custom element. Load /pixel-worlds/sigil.js with a script tag, then use <sigil-spinner label=\"Loading\"></sigil-spinner>. With no value it is a plain spinner. Call el.set(n) with progress from 0 to 1 to light the runes, el.set(1) to finish, and listen for the sigil:done event. More: https://pixel-worlds.vercel.app"
+      "docs": "Sigil is a plain script that registers a custom element. Load /pixel-worlds/sigil.js with a script tag, then use <sigil-spinner label=\"Loading\"></sigil-spinner>. With no value it is a plain spinner. Call el.set(n) with progress from 0 to 1 to fill the arc and charge the runes (a value that stands still shows as waiting), el.set(1) to finish, el.fail() if the task fails, and listen for the sigil:done and sigil:fail events. More: https://pixel-worlds.vercel.app"
     }
   ]
 }

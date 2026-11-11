@@ -135,7 +135,8 @@ const PROMPTS = {
 3. With no value it is a plain spinner: a wisp circles the ring until my task finishes. If my task can report progress, call el.set(n) with a number from 0 to 1 as it changes (or set the value attribute): the wisp then stops circling, becomes the head of an arc, and the runes charge behind it. If the number stands still for about a second the wisp waits and sends out rings, which is how a stall looks, so do not fake movement. el.set(n, true) goes straight there, and el.set(null) goes back to a plain spinner.
 4. When the task is finished, call el.set(1). The circle flares, something answers, and it settles into a done state. Listen for the "sigil:done" event on the element and carry on from there. It fires once. Call el.reset() to put it back to a spinner for the next task.
 5. It is 97 by 97 pixels and round, with clear corners. To resize it, set a CSS width on the element; a multiple of 97 pixels (97, 194) keeps the pixels even. It sits inline, so it can go next to a button or in a card.
-6. It has no text and cannot be focused. The done-label attribute is what a screen reader hears when it finishes (Done by default). If my task can fail, show the error next to it and call el.reset(), because it has no failed look.
+6. It has no text and cannot be focused. The done-label and fail-label attributes are what a screen reader hears when it finishes or fails (Done and Failed by default).
+7. If my task fails, call el.fail(): the wisp turns ember and goes out, and the "sigil:fail" event fires once. It does not say why, so show the reason next to it, and call el.reset() before the next try.
 
 When you are done, show me where you put it and where the progress number comes from. If something about it needs to look different, tell me instead of editing the painter.`,
   sage: (url) => `Add the Sage status chip to my app. It is a single JavaScript file with no dependencies that defines a <sage-status> element.

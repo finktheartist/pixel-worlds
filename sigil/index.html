@@ -21,6 +21,7 @@
   .card span { display: block; color: #685f50; font-size: 14px; }
   .card button { flex: none; height: 36px; padding: 0 14px; border: 1px solid #cfc5ae; border-radius: 8px; background: #fff; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; }
   .card button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .clip body { min-height: 100vh; place-items: center; } .clip main { width: 500px; padding: 0; } .clip h1, .clip .sub, .clip .hint { display: none; } .clip .stage { margin-bottom: 24px; }   /* ?zoom=2: for recording, centred on the page */
   .embed body { place-items: start center; min-height: 0; } .embed main { width: calc(100vw - 16px); padding: 10px 0 0; } .embed h1, .embed .sub, .embed .hint { display: none; } .embed .stage { margin-bottom: 18px; }
 </style>
 </head>
@@ -41,7 +42,9 @@
 // This page's own wiring. The component is all in sigil.js.
 const Q = new URLSearchParams(location.search), big = document.getElementById('sigil'), small = document.getElementById('small'), status = document.getElementById('status'), both = [big, small];
 if (Q.get('embed') === '1') document.documentElement.classList.add('embed');   // inside the gallery: no heading of its own
+if (Q.get('zoom')) { document.querySelector('main').style.zoom = parseFloat(Q.get('zoom')) || 1; document.documentElement.classList.add('clip'); }   // for recording a clip: ?zoom=2 doubles the page, so the pixels stay even
 small.addEventListener('sigil:done', () => { status.textContent = 'Done. Your export is ready.'; });
+small.addEventListener('sigil:fail', () => { status.textContent = 'Failed. Try again.'; });
 // A made-up task, as keyframes: [seconds, progress]. Before the first one there is no number at all, so it is a plain spinner. It stalls in the middle.
 const TASK = [[3, 0], [3.8, 0.18], [4.6, 0.42], [7.4, 0.42], [7.5, 0.7], [8.3, 0.9], [8.9, 1]], LEN = 17.5;
 function drive(t) {
@@ -52,9 +55,9 @@ function drive(t) {
 }
 const hold = Q.get('p');
 if (hold !== null) {   // ?p=0.4 holds it at 40%, ?p=spin is a plain spinner, ?p=1 is the settled answer
-  if (hold === 'spin') for (const el of both) el.set(null); else for (const el of both) el.set(parseFloat(hold) || 0, true);
-  status.textContent = hold === 'spin' ? 'Working on it\u2026' : hold === '1' ? 'Done. Your export is ready.' : Math.round((parseFloat(hold) || 0) * 100) + '% done\u2026';
-  document.querySelector('.hint').textContent = hold === 'spin' ? 'A plain spinner, with no value.' : `Held at ${Math.round((parseFloat(hold) || 0) * 100)}%.`;
+  if (hold === 'fail') for (const el of both) { el.set(0.55, true); el.fail(); } else if (hold === 'spin') for (const el of both) el.set(null); else for (const el of both) el.set(parseFloat(hold) || 0, true);
+  status.textContent = hold === 'fail' ? 'Failed. Try again.' : hold === 'spin' ? 'Working on it\u2026' : hold === '1' ? 'Done. Your export is ready.' : Math.round((parseFloat(hold) || 0) * 100) + '% done\u2026';
+  document.querySelector('.hint').textContent = hold === 'fail' ? 'A task that failed.' : hold === 'spin' ? 'A plain spinner, with no value.' : `Held at ${Math.round((parseFloat(hold) || 0) * 100)}%.`;
 } else if (Q.get('film') === '1') {   // stop the clock and step the task a frame at a time
   customElements.get('sigil-spinner').paused = true;
   let t = 0; const step = (fps = 60) => { t += 1 / fps; drive(t); for (const el of both) el.advance(1 / fps); };
