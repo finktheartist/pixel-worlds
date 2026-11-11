@@ -168,9 +168,11 @@ function scroll(x, y) { rc(x + 1, y, 5, 1, '#fffbd4'); rc(x, y + 1, 7, 1, '#ecdc
 const BY = 26, FEET = 20;                      // the top of the branch, and where he stands on it
 const REST = [30, BY - 3];                     // where the message lies until he takes it
 const WCX = 167, WCY = 19, WTOP = 8, SILL = 30, TX = 155;   // the tower window, which is the one light, and the tower's left edge
-const T0 = 0.1, T1 = 0.82, FLY_Y = 14;         // p: take the message until T0, cross until T1, then in at the window
+const T0 = 0.1, T1 = 0.76, FLY_Y = 14;         // p: take the message until T0, cross until T1, then in at the window
 const WIN = [];                                // the window opening, a row at a time, so its arch is stepped
 for (let y = WTOP; y < SILL; y++) { const dy = 17 - (y + 0.5), hw = dy > 0 ? Math.round(Math.sqrt(Math.max(0, 81 - dy * dy))) : 9; WIN.push([WCX - hw, y, hw * 2]); }
+// The far side of the opening, row by row. He flies in front of the wall, and whatever of him is past this line has gone inside. Above the arch and below the sill it carries on straight.
+const INSIDE = Array.from({ length: H }, (_, y) => { const r = WIN[clamp(y - WTOP, 0, WIN.length - 1)]; return r[0] + r[2]; });
 const AMB = 'rgb(120,124,170)', WARM = '255,190,110';
 const RAMP = ['#7c1e12', '#b8421a', '#e0641e', '#f89a38', '#f0ca4a', '#fbe88a', '#fffbd4'];
 let BACK, TOWER, BRANCH;
@@ -209,7 +211,7 @@ function flight(s) {
     const u = p / T0, v = (u % 0.5) / 0.5; carry = u >= 0.5; pose = v < 0.5 ? 0 : 2;
     if (!carry) { x = mix(A[0], PU[0], v); y = mix(A[1], PU[1], v) - 3 * Math.sin(Math.PI * v); } else { x = mix(PU[0], B0, v); y = mix(PU[1], FLY_Y, smooth(0, 1, v)); }
   } else if (p < T1) { x = mix(B0, B1, (p - T0) / (T1 - T0)); y = FLY_Y + (pose === 0 ? 1 : pose === 2 ? -1 : 0); }
-  else { const u = (p - T1) / (1 - T1); x = mix(B1, WCX + 5, u); y = mix(FLY_Y, WCY + 1, smooth(0, 1, u)); }
+  else { const u = (p - T1) / (1 - T1); x = mix(B1, WCX + 20, u); y = mix(FLY_Y, WCY + 1, smooth(0, 0.7, u)); }   // on past the opening, so all of him goes in
   return [Math.round(x), Math.round(y), pose, carry];
 }
 // One frame of the button, from the state. Returns how far across the label has turned gold.
@@ -223,16 +225,18 @@ function scene(s) {
   // inside the window: it glows, so no light is put on it. Two flat tones and a dithered edge that comes down from the arch as it heats.
   const heat = clamp(1.2 + 2.3 * p + 1.3 * arrive, 0, 5.99), lo = RAMP[heat | 0], hi = RAMP[(heat | 0) + 1], edge = WTOP - 2 + (heat % 1) * 26 + (fl - 0.95) * 16;
   for (const [x, y, w] of WIN) { rc(x, y, w, 1, flash > 0.5 ? '#fffbd4' : lo); if (flash <= 0.5) for (let q = x; q < x + w; q++) if (bayer(q, y) > clamp((y - edge) / 5 + 0.5, 0, 1)) rc(q, y, 1, 1, hi); }
-  // he goes behind the tower wall, so once he reaches it he can only be seen through the window
-  if (!idle && !sent) {
-    const [x, y, pose, carry] = flight(s); split = x;
-    const B = layer(() => bird(x, y, pose, carry)); lit(B, { amb: AMB, lights: [] }); rim(B, -1, 0, WCX, WCY, 110, '255,205,140', (0.4 + lv * 0.6) * (1 - smooth(T1 - 0.1, T1, p)));   // in front of the window he is only a dark shape
-    g.drawImage(B, 0, 0); release(B);
-    if (carry) scroll(x - 9, y + 4);
-    if (!s.blink) rc(x + 6, y - 1, 1, 1, EYE);
-  }
   if (sent && flash <= 0.5) { spr(SIT, WCX + 13, SILL - 18, true, '#101322'); rc(WCX - 1, SILL - 16, 1, 1, '#fbe88a'); }   // in, and turned round to look back
   const TW = lit(layer(() => g.drawImage(TOWER, 0, 0)), { amb: AMB, lights: [[WCX, WCY, Math.round(14 + 24 * steady), WARM, steady, true]] }); g.drawImage(TW, 0, 0);
+  // He flies in front of the tower and in through the window: the part of him that has passed the far side of the opening is inside, and is not drawn.
+  if (!idle && !sent) {
+    const [x, y, pose, carry] = flight(s); split = Math.min(x, W);
+    const B = layer(() => bird(x, y, pose, carry)); lit(B, { amb: AMB, lights: [] }); rim(B, -1, 0, WCX, WCY, 110, '255,205,140', (0.4 + lv * 0.6) * (1 - smooth(T1 - 0.1, T1, p)));   // in front of the window he is only a dark shape
+    const prev = g; g = B.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    if (carry) scroll(x - 9, y + 4);
+    if (!s.blink) rc(x + 6, y - 1, 1, 1, EYE);
+    g.globalCompositeOperation = 'destination-out'; for (let q = 0; q < H; q++) rc(INSIDE[q], q, W - INSIDE[q], 1, '#000'); g.globalCompositeOperation = 'source-over';
+    g = prev; g.drawImage(B, 0, 0); release(B);
+  }
   const up = idle && (s.ready || s.look > 0), caw = up && !s.ready && (s.look % 0.38) > 0.06 && (s.look % 0.38) < 0.24 && s.look < 0.76;
   const PL = layer(() => {
     g.drawImage(BRANCH, 0, 0);

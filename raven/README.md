@@ -73,7 +73,7 @@ The page in this folder is a demo of the element. Its own wiring ("Send another"
 | press | lifts a wing, and the button sits down on its shadow |
 | press, then drag off and let go | nothing is sent |
 | let go | hops onto the message, takes it in his feet and flies; the label turns gold behind him |
-| the last fifth | goes in behind the window frame, where you can only see him through the opening |
+| the last quarter | flies in front of the tower and in through the window. The part of him that has gone in is no longer drawn |
 | arrives | the window flashes, then stays lit with him sitting in it, looking back. The label changes, the outline dims and the button stays down |
 
 Where he is comes from one number, how far the send has got, so the bird and the progress cannot drift apart. Only the wing beats, the blinking and the flicker in the window run on the clock, so if an upload stalls he flaps on the spot.
@@ -85,7 +85,7 @@ Where he is comes from one number, how far the send has got, so the bird and the
 - **Four wing poses, stepped.** Up, level, down and coming back up. In each one the wings are outside the body's outline, so no frame is a plain dark lump.
 - **The message is 7 by 3** and hangs from his feet, behind the wings. It is drawn after the light, in exact colours, so it never goes grey.
 - **One light: the window.** The sky and hills get none. The tower wall takes the light in two flat rings, in steps, so the stones stay flat tones. He gets a thin warm edge on the side facing the window, which goes once he is in front of it.
-- **The ending is a cut, not a shrink.** He is drawn behind the tower wall, so the wall hides him as he goes in. The window flashes pale for about a sixth of a second, and under the flash the flying bird is swapped for the sitting one, mirrored, in one dark colour.
+- **He goes in through the window, and nothing is scaled.** He is drawn in front of the tower. The far side of the opening is a line that follows the arch row by row, and whatever of him is past it has gone inside and is not drawn. Once all of him is in, the window flashes pale for about a sixth of a second, and under the flash the sitting bird appears, mirrored, in one dark colour.
 - **The button outline is pixels too.** An ink capsule with stepped round ends and a hard shadow, the same as Hoard. Pressed, it sits down on its shadow. With keyboard focus the outline and shadow are yellow.
 - **The lettering is a 5×7 pixel font** in the same grid as the art. The real words stay in the page underneath, transparent, for layout and screen readers.
 
@@ -99,7 +99,7 @@ It cost about 1.4 ms a frame in headless Chrome, and two of them flying at once 
 - **No disabled look and no failed look.** There is nothing for a send that went wrong. `reset()` only puts him back.
 - **Going backwards is plain.** If `progress` falls he slides back the way he came, still facing the tower.
 - **Motion is always on.** It does not change for `prefers-reduced-motion`.
-- **Weak frames.** The coming-back-up wing pose is the least clear of the four. For a few frames on the way in, the wall cuts him in two. The flash is an empty pale window.
+- **Weak frames.** The coming-back-up wing pose is the least clear of the four. For the last few frames only his tail is left in the opening. The flash is an empty pale window.
 - **Checked in headless Chrome only,** with a real mouse click and real key presses sent through its DevTools protocol. Not tried in Safari or Firefox, on a touch screen, or with a screen reader.
 - **No clip yet.** `?film=1` runs a scripted take (idle, hover, press, the flight, sent), but nothing has been rendered from it.
 - **Not on npm, and not a module.** It is a plain script that registers the element when it loads.
